@@ -188,22 +188,35 @@
   function providerCard(p) {
     const card = el("div", "provider-card");
     card.dataset.id = p.id;
-    if (state.selected.has(p.id)) card.classList.add("on");
+    card.setAttribute("role", "checkbox");
+    card.setAttribute("tabindex", "0");
+    const isOn = state.selected.has(p.id);
+    card.setAttribute("aria-checked", String(isOn));
+    card.setAttribute("aria-label", `${p.name} — ${p.regions.length} regions`);
+    if (isOn) card.classList.add("on");
     const initials = p.name.replace(/[^A-Za-z0-9]/g, "").slice(0, 2).toUpperCase();
+    // SVG checkmark — no emoji per skill pre-delivery checklist
+    const checkSVG = `<svg width="11" height="9" viewBox="0 0 11 9" fill="none" aria-hidden="true">
+      <path d="M1 4L4 7.5L10 1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
     card.append(
       Object.assign(el("div", "logo", initials), { style: `background:${p.color}` }),
       el("div", "meta",
         `<div class="name">${p.name}</div>
          <div class="count">${p.regions.length} regions</div>`),
-      el("div", "tick", "✓")
+      el("div", "tick", checkSVG)
     );
-    card.addEventListener("click", () => {
+    const toggle = () => {
       if (state.running) { toast("Stop the test before changing providers"); return; }
       card.classList.toggle("on");
-      card.classList.contains("on") ? state.selected.add(p.id) : state.selected.delete(p.id);
+      const on = card.classList.contains("on");
+      card.setAttribute("aria-checked", String(on));
+      on ? state.selected.add(p.id) : state.selected.delete(p.id);
       updateCounters();
       saveConfig();
-    });
+    };
+    card.addEventListener("click", toggle);
+    card.addEventListener("keydown", e => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggle(); } });
     return card;
   }
 
@@ -342,17 +355,32 @@
     paintBars();
   }
 
+  /* SVG rank badges — no emoji per UI/UX Pro Max skill */
+  const RANK_BADGES = [
+    /* gold  */ `<svg class="rank-badge rank-1" width="28" height="28" viewBox="0 0 28 28" aria-label="1st place">
+      <circle cx="14" cy="14" r="13" fill="#F59E0B" fill-opacity="0.15" stroke="#F59E0B" stroke-width="1.5"/>
+      <text x="14" y="19" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" font-weight="700" fill="#D97706">1</text>
+    </svg>`,
+    /* silver*/ `<svg class="rank-badge rank-2" width="28" height="28" viewBox="0 0 28 28" aria-label="2nd place">
+      <circle cx="14" cy="14" r="13" fill="#94A3B8" fill-opacity="0.15" stroke="#94A3B8" stroke-width="1.5"/>
+      <text x="14" y="19" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" font-weight="700" fill="#64748B">2</text>
+    </svg>`,
+    /* bronze*/ `<svg class="rank-badge rank-3" width="28" height="28" viewBox="0 0 28 28" aria-label="3rd place">
+      <circle cx="14" cy="14" r="13" fill="#CD7F32" fill-opacity="0.15" stroke="#CD7F32" stroke-width="1.5"/>
+      <text x="14" y="19" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" font-weight="700" fill="#A05A2C">3</text>
+    </svg>`
+  ];
+  const RANK_PLACES = ["Fastest region", "Runner-up", "Third place"];
+
   function renderPodium() {
     const pod = $("#podium");
     const ranked = state.rows.filter(r => r.stats).sort((a, b) => a.stats.median - b.stats.median).slice(0, 3);
     if (ranked.length < 1) { pod.hidden = true; return; }
     pod.hidden = false;
-    const medals = ["🥇", "🥈", "🥉"];
-    const places = ["Fastest region", "Runner-up", "Third place"];
     pod.innerHTML = ranked.map((r, i) => `
       <div class="podium-card">
-        <span class="medal">${medals[i]}</span>
-        <div class="place">${places[i]}</div>
+        <span class="medal" aria-hidden="true">${RANK_BADGES[i]}</span>
+        <div class="place">${RANK_PLACES[i]}</div>
         <div class="where">${r.flag} ${r.region.text2}</div>
         <div class="prov">${r.provider.name} · ${r.region.code}</div>
         <div class="ms">${Math.round(r.stats.median)}<small> ms median</small></div>

@@ -45,6 +45,38 @@ html[data-theme="dark"] {
   --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.3), 0 16px 40px rgba(0, 0, 0, 0.4);
 }
 
+/* ==============================================================
+   UI/UX Pro Max Skill — Global baseline rules
+   Priority 1: Accessibility  |  Priority 2: Touch & Interaction
+   ============================================================== */
+
+/* Screen-reader only utility — visible label pattern per skill §8 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skill §2: touch-action manipulation on all interactive controls
+   reduces 300ms tap delay on mobile browsers */
+button, [role="checkbox"], [role="button"],
+a, select, input, textarea {
+  touch-action: manipulation;
+}
+
+/* Skill §1: Visible focus rings — never remove, 2–4px per HIG/MD */
+:focus-visible {
+  outline: 2.5px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 * { box-sizing: border-box; }
 
 html { scroll-behavior: smooth; }
@@ -616,10 +648,73 @@ svg.spark circle { fill: var(--accent); }
   gap: 18px;
 }
 
+/* ==============================================================
+   UI/UX Pro Max Skill — Interaction quality
+   Priority 2: cursor-pointer on ALL clickable elements
+   ============================================================== */
+
+/* Skill pre-delivery checklist: cursor-pointer on all clickable elements */
+button:not(:disabled),
+[role="checkbox"],
+[role="button"],
+label[for],
+summary,
+.chip-btn,
+.icon-btn,
+.ai-chip,
+.ai-key-toggle,
+.ai-key-save,
+.ai-send-btn:not(:disabled),
+table.results thead th {
+  cursor: pointer;
+}
+
+/* Skill §4: No emoji as icons — SVG rank badge styles */
+.rank-badge { display: block; flex: none; }
+.rank-badge text { font-feature-settings: "tnum"; }
+
+/* Skill §6: tabular-nums on ALL numeric data cells */
+.podium-card .ms,
+td.ms,
+.lat-num,
+.run-line b,
+.hero-stat .num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Skill §5: Breakpoint consistency — 375px / 640px / 768px / 1024px / 1440px */
 @media (max-width: 640px) {
   .hero { padding: 48px 0 38px; }
+  /* Skill §5: horizontal-scroll prevention, safe content width */
+  .hero h1 { font-size: clamp(28px, 8vw, 40px); }
+  .hero p.lede { font-size: 15.5px; }
+  .hero-stats { gap: 18px; }
+  .hero-stat .num { font-size: 24px; }
+
   .controls { flex-direction: column; align-items: stretch; }
   .btn-run { justify-content: center; }
+
+  /* Skill §5: min-touch-target 44px on mobile */
+  .chip-btn, .ai-chip {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* Skill §5: 375px — podium cards stack */
+  .podium { grid-template-columns: 1fr; }
+
+  /* Skill §5: wrap providers grid tighter on tiny screens */
+  .providers { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+
+  /* Skill §5: footer readable on small screens */
+  .site-footer .wrap { flex-direction: column; gap: 10px; }
+}
+
+/* Skill §5: 375px — min safe padding */
+@media (max-width: 400px) {
+  .wrap { padding: 0 16px; }
+  .ai-body { padding: 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

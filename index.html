@@ -152,9 +152,11 @@
 
         <!-- prompt input — monospace/terminal style -->
         <div class="ai-input-row">
+          <label for="aiPromptInput" class="sr-only">Ask Claude about your results</label>
           <textarea id="aiPromptInput" rows="2"
-            placeholder="Ask anything about your latency results… (Ctrl+Enter to send)"></textarea>
-          <button class="ai-send-btn" id="aiSubmitBtn" title="Send (Ctrl+Enter)" disabled>
+            placeholder="Ask anything about your latency results… (Ctrl+Enter to send)"
+            aria-label="Ask Claude about your results"></textarea>
+          <button class="ai-send-btn" id="aiSubmitBtn" title="Send (Ctrl+Enter)" aria-label="Send question" disabled>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
             </svg>
@@ -171,11 +173,13 @@
           <button class="ai-key-toggle" id="aiKeyToggle">change</button>
         </div>
         <div class="ai-key-row" id="aiKeyRow" hidden>
+          <label for="aiKeyInput" class="sr-only">Anthropic API key</label>
           <input type="password" id="aiKeyInput"
-            placeholder="sk-ant-api03-…" autocomplete="off" spellcheck="false">
+            placeholder="sk-ant-api03-…" autocomplete="off" spellcheck="false"
+            aria-label="Anthropic API key" aria-describedby="aiKeyNote">
           <button class="ai-key-save" id="aiKeySave">Save</button>
         </div>
-        <p class="ai-key-note">
+        <p class="ai-key-note" id="aiKeyNote">
           Stored only in your browser's localStorage · sent directly to Anthropic · never shared.
         </p>
       </div>
