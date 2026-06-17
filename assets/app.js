@@ -606,28 +606,62 @@
     if (clearBtn) clearBtn.hidden = !k;
   }
 
-  /* ── IP Geolocation (free, no API key) ── */
-  async function detectUserGeo() {
-    if (_geoCtx) return _geoCtx;
+  /* ── IP Geolocation (free, no API key, multi-source fallback) ── */
+
+  // Fetch with an AbortController timeout
+  function fetchWithTimeout(url, ms) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), ms);
+    return fetch(url, { signal: ctrl.signal, cache: "force-cache" })
+      .finally(() => clearTimeout(timer));
+  }
+
+  // Normalise responses from different geo APIs into a common shape
+  async function tryGeoSource(url, normalise) {
     try {
-      const res = await fetch(
-        "https://ip-api.com/json/?fields=status,country,countryCode,regionName,city,isp,org,lat,lon,timezone,query",
-        { cache: "force-cache" }
-      );
+      const res = await fetchWithTimeout(url, 4000);
       if (!res.ok) return null;
       const d = await res.json();
-      if (d.status !== "success") return null;
-      // Classify broad geographic region
-      const geo = classifyGeoRegion(d.lat, d.lon, d.countryCode);
-      _geoCtx = {
-        ip: d.query, city: d.city, region: d.regionName,
-        country: d.country, countryCode: d.countryCode,
-        isp: d.isp || d.org || "",
-        lat: d.lat, lon: d.lon, timezone: d.timezone,
-        geoRegion: geo
-      };
-      return _geoCtx;
+      return normalise(d);
     } catch { return null; }
+  }
+
+  async function detectUserGeo() {
+    if (_geoCtx) return _geoCtx;
+
+    // Try multiple free geo APIs in priority order (no API key needed for any)
+    const result =
+      // 1. ipwho.is — works globally, HTTPS, no key
+      await tryGeoSource("https://ipwho.is/", d =>
+        d.success ? {
+          ip: d.ip, city: d.city, region: d.region,
+          country: d.country, countryCode: d.country_code,
+          isp: d.connection?.isp || d.connection?.org || "",
+          lat: d.latitude, lon: d.longitude, timezone: d.timezone?.id || ""
+        } : null
+      ) ||
+      // 2. freeipapi.com — generous free tier, no key
+      await tryGeoSource("https://freeipapi.com/api/json", d =>
+        d.ipVersion ? {
+          ip: d.ipAddress, city: d.cityName, region: d.regionName,
+          country: d.countryName, countryCode: d.countryCode,
+          isp: "", lat: d.latitude, lon: d.longitude, timezone: d.timeZone || ""
+        } : null
+      ) ||
+      // 3. ip-api.com — fast but may be blocked in some regions
+      await tryGeoSource(
+        "https://ip-api.com/json/?fields=status,country,countryCode,regionName,city,isp,org,lat,lon,query",
+        d => d.status === "success" ? {
+          ip: d.query, city: d.city, region: d.regionName,
+          country: d.country, countryCode: d.countryCode,
+          isp: d.isp || d.org || "", lat: d.lat, lon: d.lon, timezone: ""
+        } : null
+      );
+
+    if (!result) return null;
+
+    _geoCtx = { ...result, geoRegion: classifyGeoRegion(result.lat, result.lon) };
+    return _geoCtx;
   }
 
   function classifyGeoRegion(lat, lon) {
@@ -643,13 +677,18 @@
   }
 
   function updateLocationBar(geo) {
-    const bar  = $("#aiLocationBar");
-    const txt  = $("#aiLocationText");
-    const isp  = $("#aiLocationISP");
+    const bar = $("#aiLocationBar");
+    const txt = $("#aiLocationText");
+    const isp = $("#aiLocationISP");
     if (!bar || !txt) return;
-    if (!geo) { bar.hidden = true; return; }
-    txt.textContent = `${geo.city ? geo.city + ", " : ""}${geo.country}`;
-    if (isp && geo.isp) isp.textContent = "· " + geo.isp.replace(/^AS\d+\s+/, "").slice(0, 40);
+    if (!geo) {
+      // Detection failed — hide entirely (don't show "Detecting…")
+      bar.hidden = true;
+      return;
+    }
+    const location = [geo.city, geo.country].filter(Boolean).join(", ");
+    txt.textContent = location || geo.countryCode || "Unknown location";
+    if (isp) isp.textContent = geo.isp ? "· " + geo.isp.replace(/^AS\d+\s+/, "").slice(0, 45) : "";
     bar.hidden = false;
   }
 

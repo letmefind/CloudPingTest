@@ -50,6 +50,9 @@ html[data-theme="dark"] {
    Priority 1: Accessibility  |  Priority 2: Touch & Interaction
    ============================================================== */
 
+/* Fix: CSS display rules must not override the HTML `hidden` attribute */
+[hidden] { display: none !important; }
+
 /* Screen-reader only utility — visible label pattern per skill §8 */
 .sr-only {
   position: absolute;
