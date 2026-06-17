@@ -681,8 +681,9 @@ html[data-theme="dark"] {
   background: var(--ai);
   display: grid;
   place-items: center;
+  overflow: hidden;
 }
-.ai-logo svg { width: 16px; height: 16px; fill: #fff; }
+.ai-logo svg { width: 16px; height: 16px; fill: #fff; flex: none; }
 
 .ai-badge {
   font-family: var(--font-mono);
