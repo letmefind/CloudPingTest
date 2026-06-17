@@ -178,6 +178,110 @@ CloudPingTest/
 
 ---
 
+## Adding providers & regions
+
+All data lives in one file: **`assets/data.js`**
+
+### Add a region to an existing provider
+
+Open `assets/data.js`, find the provider block, and add one line to its `regions` array:
+
+```js
+{ text1: "Middle East", text2: "Riyadh", code: "me-central-2" }
+```
+
+| Field | What to put |
+|---|---|
+| `text1` | Geographic group: `"Europe"`, `"Asia Pacific"`, `"Middle East"`, `"US East"`, etc. |
+| `text2` | City / location name shown in the results table |
+| `code`  | Region identifier exactly as the provider uses it |
+
+### Add a completely new provider
+
+Append a new object to the `PROVIDERS` array:
+
+```js
+{
+  id:       "myprovider",            // unique, lowercase, no spaces
+  name:     "MyProvider",            // short label shown on the provider card
+  longName: "My Provider Full Name", // shown in tooltips
+  color:    "#FF0000",               // brand hex color
+  url:      r => `https://ping.${r.code}.myprovider.com/ping`,  // ping URL builder
+  regions: [
+    { text1: "Europe",  text2: "Amsterdam", code: "ams1" },
+    { text1: "US East", text2: "New York",  code: "nyc1" },
+  ]
+}
+```
+
+### How to find the ping URL
+
+The app loads any URL as an image beacon — it just needs to respond (even HTTP 404 counts).
+**Test a URL in your browser console before adding it:**
+
+```js
+const start = performance.now();
+const img = new Image();
+img.onload = img.onerror = () =>
+  console.log("RTT:", Math.round(performance.now() - start), "ms");
+img.src = "https://YOUR-ENDPOINT?" + Date.now();
+```
+✅ Got a number in ms → URL works  
+❌ Hangs or CORS error → try a different endpoint
+
+**Known patterns for popular providers:**
+
+```js
+// AWS
+r => `https://ec2.${r.code}.amazonaws.com/ping`
+
+// Azure Blob Storage
+r => `https://s8${r.code}.blob.core.windows.net/public/latency-test.json`
+
+// GCP (varies by region slug)
+r => `https://storage.googleapis.com/${r.code}/generate_204`
+
+// DigitalOcean Spaces
+r => `https://${r.code}.digitaloceanspaces.com`
+
+// Vultr Object Storage
+r => `https://${r.code}.vultrobjects.com`
+
+// Hetzner
+r => `https://speed.${r.code}.hetzner.com/.ping`
+
+// Linode Object Storage
+r => `https://${r.code}.linodeobjects.com`
+
+// Oracle Cloud
+r => `https://objectstorage.${r.code}.oraclecloud.com/`
+```
+
+If each region has its own unique URL, store it directly in the region object:
+
+```js
+url: r => r.endpoint,   // reads from the region entry itself
+regions: [
+  { text1: "Europe", text2: "Amsterdam", code: "ams1",
+    endpoint: "https://ams1.myprovider.com/ping" },
+]
+```
+
+### After editing
+
+Bump the cache-buster in `index.html` so browsers pick up the change:
+
+```html
+<!-- change v=7 → v=8 (any higher number) -->
+<script src="assets/data.js?v=7"></script>
+```
+
+Then commit & push — GitHub Pages deploys automatically.
+
+> For a longer reference with all URL patterns and a checklist, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
 ## Credits
 
 - **Original project, region catalog & endpoints:** [VarunAgw/CloudPingTest](https://github.com/VarunAgw/CloudPingTest) — please consider [donating](https://varunagw.com/donate) to support the original work.
