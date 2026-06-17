@@ -553,6 +553,46 @@ section.block { padding: 44px 0 8px; }
 .btn-run.running { background: var(--ink); }
 html[data-theme="dark"] .btn-run.running { background: var(--bg-soft); color: var(--ink); border: 1px solid var(--line); }
 
+/* ---------------- round picker ---------------- */
+.round-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--line);
+  background: var(--bg-soft);
+  transition: opacity 0.2s ease;
+}
+.round-picker[hidden] { display: none; }
+
+.round-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+#roundSelect {
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-ink);
+  cursor: pointer;
+  padding: 2px 4px;
+  appearance: auto;
+}
+#roundSelect:focus-visible {
+  outline: 2px solid var(--accent);
+  border-radius: 4px;
+}
+
 .run-status { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 220px; }
 
 .run-line {

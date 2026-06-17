@@ -111,6 +111,21 @@
   <section class="block reveal-3d">
     <div class="controls">
       <button class="btn-run" id="runBtn">▶ &nbsp;Start test</button>
+
+      <!-- Round count picker — shown only when test is not running -->
+      <div class="round-picker" id="roundPickerWrap" title="Number of test rounds to run">
+        <label for="roundSelect" class="round-label">Rounds</label>
+        <select id="roundSelect" aria-label="Number of test rounds">
+          <option value="1">1</option>
+          <option value="3">3</option>
+          <option value="5" selected>5</option>
+          <option value="10">10</option>
+          <option value="20">20</option>
+          <option value="50">50</option>
+          <option value="0">∞</option>
+        </select>
+      </div>
+
       <div class="run-status">
         <div class="run-line">
           <span>Round <b id="roundNum">–</b></span>

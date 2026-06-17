@@ -20,7 +20,8 @@
     pingsSent: 0,
     sortKey: "median",
     sortAsc: true,
-    filter: ""
+    filter: "",
+    maxRounds: 5         // 0 = unlimited
   };
 
   const $ = sel => document.querySelector(sel);
@@ -39,7 +40,8 @@
         selected: [...state.selected],
         theme: document.documentElement.dataset.theme,
         sortKey: state.sortKey,
-        sortAsc: state.sortAsc
+        sortAsc: state.sortAsc,
+        maxRounds: state.maxRounds
       }));
     } catch (e) { /* storage unavailable */ }
   }
@@ -52,6 +54,7 @@
       else if (window.matchMedia("(prefers-color-scheme: dark)").matches)
         document.documentElement.dataset.theme = "dark";
       if (cfg.sortKey) { state.sortKey = cfg.sortKey; state.sortAsc = cfg.sortAsc !== false; }
+      if (cfg.maxRounds !== undefined) state.maxRounds = cfg.maxRounds;
     } catch (e) { /* corrupt config -> defaults */ }
     if (state.selected.size === 0) state.selected.add("aws");
   }
@@ -117,9 +120,10 @@
       bumpPings();
     }
 
-    while (!state.stopRequested) {
+    const limit = state.maxRounds; // 0 = unlimited
+    while (!state.stopRequested && (limit === 0 || state.round < limit)) {
       state.round++;
-      setRoundLabel(String(state.round));
+      setRoundLabel(`${state.round}${limit > 0 ? " / " + limit : ""}`);
       for (let i = 0; i < rows.length; i++) {
         if (state.stopRequested) break;
         const row = rows[i];
@@ -139,14 +143,17 @@
       resortAndPaint();
     }
 
+    const autoFinished = !state.stopRequested && limit > 0;
     clearTesting();
     state.running = false;
-    setRoundLabel("done (" + state.round + ")");
+    setRoundLabel(autoFinished ? "✓ done" : "stopped");
     $("#nowTesting").textContent = "–";
     $("#progressBar").style.width = "0%";
     updateRunButton();
     saveConfig();
-    toast("Test stopped — results are sortable & exportable");
+    toast(autoFinished
+      ? `✓ Test complete — ${state.round} round${state.round !== 1 ? "s" : ""} · results ready`
+      : "Test stopped — results are sortable & exportable");
   }
 
   function buildRows() {
@@ -416,6 +423,9 @@
       btn.classList.remove("running");
       btn.innerHTML = "▶ &nbsp;Start test";
     }
+    // Show/hide round picker — only editable before test starts
+    const wrap = $("#roundPickerWrap");
+    if (wrap) wrap.hidden = state.running;
   }
 
   function updateCounters() {
@@ -467,11 +477,24 @@
 
   /* ---------------- wiring ---------------- */
 
+  function syncRoundPicker() {
+    const sel = $("#roundSelect");
+    if (!sel) return;
+    // Set the select value to match state; fall back to closest option
+    const val = String(state.maxRounds);
+    const opt = [...sel.options].find(o => o.value === val);
+    if (opt) sel.value = val;
+    // Hide picker while test is running
+    const wrap = $("#roundPickerWrap");
+    if (wrap) wrap.hidden = state.running;
+  }
+
   function init() {
     loadConfig();
     renderProviders();
     updateCounters();
     $("#year").textContent = new Date().getFullYear();
+    syncRoundPicker();
 
     $("#runBtn").addEventListener("click", () => {
       if (state.running) {
@@ -493,6 +516,15 @@
       state.selected.clear();
       renderProviders(); updateCounters(); saveConfig();
     });
+
+    // Round picker
+    const roundSel = $("#roundSelect");
+    if (roundSel) {
+      roundSel.addEventListener("change", () => {
+        state.maxRounds = parseInt(roundSel.value, 10);
+        saveConfig();
+      });
+    }
 
     $("#themeToggle").addEventListener("click", () => {
       const html = document.documentElement;
