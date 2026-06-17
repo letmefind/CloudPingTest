@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" dir="ltr" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,8 +9,8 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/styles.css?v=7">
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/styles.css?v=8">
 </head>
 <body>
 
@@ -18,10 +18,39 @@
   <div class="wrap">
     <a class="brand" href="./"><span class="brand-dot"></span>CloudPing</a>
     <div class="header-actions">
-      <button class="icon-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">◐</button>
-      <a class="icon-btn" id="githubLink" href="https://github.com/letmefind/CloudPingTest" target="_blank" rel="noopener">
-        GitHub ↗
-      </a>
+
+      <!-- Language picker -->
+      <div class="lang-picker" id="langPicker">
+        <button class="icon-btn lang-btn" id="langBtn"
+                aria-haspopup="listbox" aria-expanded="false"
+                data-i18n-aria="aria_lang">
+          <span id="langFlag" aria-hidden="true">🇺🇸</span>
+          <span id="langCode">EN</span>
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" style="opacity:.6"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>
+        </button>
+        <ul class="lang-menu" id="langMenu" role="listbox" hidden
+            aria-label="Select language">
+          <li class="lang-option" role="option" data-lang="en"  aria-selected="true" >🇺🇸 English</li>
+          <li class="lang-option" role="option" data-lang="fa"  aria-selected="false">🇮🇷 فارسی</li>
+          <li class="lang-option" role="option" data-lang="ar"  aria-selected="false">🇸🇦 العربية</li>
+          <li class="lang-option" role="option" data-lang="de"  aria-selected="false">🇩🇪 Deutsch</li>
+          <li class="lang-option" role="option" data-lang="fr"  aria-selected="false">🇫🇷 Français</li>
+          <li class="lang-option" role="option" data-lang="es"  aria-selected="false">🇪🇸 Español</li>
+          <li class="lang-option" role="option" data-lang="zh"  aria-selected="false">🇨🇳 中文</li>
+          <li class="lang-option" role="option" data-lang="tr"  aria-selected="false">🇹🇷 Türkçe</li>
+          <li class="lang-option" role="option" data-lang="ru"  aria-selected="false">🇷🇺 Русский</li>
+          <li class="lang-option" role="option" data-lang="pt"  aria-selected="false">🇧🇷 Português</li>
+          <li class="lang-option" role="option" data-lang="ja"  aria-selected="false">🇯🇵 日本語</li>
+          <li class="lang-option" role="option" data-lang="ko"  aria-selected="false">🇰🇷 한국어</li>
+          <li class="lang-option" role="option" data-lang="hi"  aria-selected="false">🇮🇳 हिन्दी</li>
+        </ul>
+      </div>
+
+      <button class="icon-btn" id="themeToggle"
+              data-i18n-title="title_theme" data-i18n-aria="title_theme"
+              title="Toggle theme" aria-label="Toggle theme">◐</button>
+      <a class="icon-btn" id="githubLink" href="https://github.com/letmefind/CloudPingTest"
+         target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </div>
 </header>
@@ -64,13 +93,11 @@
     <circle class="ring" cx="210" cy="210" r="70"  stroke-width="1.5"/>
     <circle class="ring" cx="210" cy="210" r="125" stroke-width="1.2"/>
     <circle class="ring" cx="210" cy="210" r="180" stroke-width="1"/>
-    <!-- Cross-hairs -->
     <line x1="210" y1="30" x2="210" y2="390" stroke="#d97757" stroke-opacity="0.12" stroke-width="1"/>
     <line x1="30"  y1="210" x2="390" y2="210" stroke="#d97757" stroke-opacity="0.12" stroke-width="1"/>
     <g class="sweep">
       <path d="M210 210 L210 26 A184 184 0 0 1 318 62 Z" fill="url(#sweepGrad)"/>
     </g>
-    <!-- Blips with glow -->
     <circle cx="265" cy="130" r="14" fill="url(#blipGlow)" class="blip-glow"/>
     <circle class="blip" cx="265" cy="130" r="5"/>
     <circle cx="150" cy="265" r="12" fill="url(#blipGlow)" class="blip-glow"/>
@@ -81,15 +108,15 @@
 
   <!-- Layer 4 — hero content (slowest parallax) -->
   <div class="wrap hero-content" id="heroContent">
-    <h1 class="hero-headline">How far is <em>the cloud</em> from you?</h1>
-    <p class="lede">
+    <h1 class="hero-headline" data-i18n-html="hero_headline">How far is <em>the cloud</em> from you?</h1>
+    <p class="lede" data-i18n="hero_lede">
       Measure real round-trip latency from your browser to hundreds of cloud regions —
       no installs, no sign-ups. Pick your providers, press start, and watch the planet answer.
     </p>
     <div class="hero-stats">
-      <div class="hero-stat"><div class="num" id="statProviders">0</div><div class="lbl">Providers</div></div>
-      <div class="hero-stat"><div class="num" id="statRegions">0</div><div class="lbl">Regions</div></div>
-      <div class="hero-stat"><div class="num" id="statPings">0</div><div class="lbl">Pings sent</div></div>
+      <div class="hero-stat"><div class="num" id="statProviders">0</div><div class="lbl" data-i18n="stat_providers">Providers</div></div>
+      <div class="hero-stat"><div class="num" id="statRegions">0</div><div class="lbl" data-i18n="stat_regions">Regions</div></div>
+      <div class="hero-stat"><div class="num" id="statPings">0</div><div class="lbl" data-i18n="stat_pings">Pings sent</div></div>
     </div>
   </div>
 
@@ -99,10 +126,10 @@
 
   <section class="block reveal-3d" id="providersBlock">
     <div class="block-head">
-      <h2>Choose providers</h2>
+      <h2 data-i18n="section_providers">Choose providers</h2>
       <div class="mini-actions">
-        <button class="chip-btn" id="selAll">Select all</button>
-        <button class="chip-btn" id="selNone">Clear</button>
+        <button class="chip-btn" id="selAll" data-i18n="btn_select_all">Select all</button>
+        <button class="chip-btn" id="selNone" data-i18n="btn_clear">Clear</button>
       </div>
     </div>
     <div class="providers" id="providerGrid"></div>
@@ -110,12 +137,13 @@
 
   <section class="block reveal-3d">
     <div class="controls">
-      <button class="btn-run" id="runBtn">▶ &nbsp;Start test</button>
+      <button class="btn-run" id="runBtn" data-i18n-html="btn_start">▶ &nbsp;Start test</button>
 
-      <!-- Round count picker — shown only when test is not running -->
-      <div class="round-picker" id="roundPickerWrap" title="Number of test rounds to run">
-        <label for="roundSelect" class="round-label">Rounds</label>
-        <select id="roundSelect" aria-label="Number of test rounds">
+      <!-- Round count picker -->
+      <div class="round-picker" id="roundPickerWrap"
+           data-i18n-title="title_rounds" title="Number of test rounds to run">
+        <label for="roundSelect" class="round-label" data-i18n="label_rounds">Rounds</label>
+        <select id="roundSelect" data-i18n-aria="aria_rounds" aria-label="Number of test rounds">
           <option value="1">1</option>
           <option value="3">3</option>
           <option value="5" selected>5</option>
@@ -128,17 +156,20 @@
 
       <div class="run-status">
         <div class="run-line">
-          <span>Round <b id="roundNum">–</b></span>
-          <span>Testing <b id="nowTesting">–</b></span>
-          <span><b id="regionCount">0</b> regions selected</span>
+          <span><span data-i18n="status_round">Round</span> <b id="roundNum">–</b></span>
+          <span><span data-i18n="status_testing">Testing</span> <b id="nowTesting">–</b></span>
+          <span><b id="regionCount">0</b> <span data-i18n="status_regions">regions selected</span></span>
         </div>
         <div class="progress"><i id="progressBar"></i></div>
       </div>
       <div class="search-box">
         <span aria-hidden="true">⌕</span>
-        <input id="searchInput" type="search" placeholder="Filter regions…">
+        <input id="searchInput" type="search"
+               data-i18n-ph="placeholder_search"
+               placeholder="Filter regions…">
       </div>
-      <button class="chip-btn" id="exportBtn" title="Export results as CSV">Export CSV</button>
+      <button class="chip-btn" id="exportBtn" data-i18n="btn_export"
+              title="Export results as CSV">Export CSV</button>
     </div>
 
     <div class="podium" id="podium" hidden></div>
@@ -147,24 +178,24 @@
       <table class="results">
         <thead>
         <tr id="headRow">
-          <th data-key="rank">#</th>
-          <th data-key="provider">Provider</th>
-          <th data-key="region">Region</th>
-          <th data-key="code">Code</th>
-          <th data-key="last">Last</th>
-          <th data-key="median" class="sorted">Median <span class="arrow">▲</span></th>
-          <th data-key="mean">Mean</th>
-          <th data-key="min">Min</th>
-          <th data-key="max">Max</th>
-          <th data-key="jitter">Jitter</th>
-          <th data-key="spark">History</th>
+          <th data-key="rank"    data-i18n="th_rank"    >#</th>
+          <th data-key="provider"data-i18n="th_provider">Provider</th>
+          <th data-key="region"  data-i18n="th_region"  >Region</th>
+          <th data-key="code"    data-i18n="th_code"    >Code</th>
+          <th data-key="last"    data-i18n="th_last"    >Last</th>
+          <th data-key="median" class="sorted"><span data-i18n="th_median">Median</span> <span class="arrow">▲</span></th>
+          <th data-key="mean"    data-i18n="th_mean"    >Mean</th>
+          <th data-key="min"     data-i18n="th_min"     >Min</th>
+          <th data-key="max"     data-i18n="th_max"     >Max</th>
+          <th data-key="jitter"  data-i18n="th_jitter"  >Jitter</th>
+          <th data-key="spark"   data-i18n="th_history" >History</th>
         </tr>
         </thead>
         <tbody id="resultsBody"></tbody>
       </table>
       <div class="empty-note" id="emptyNote">
-        <div class="big">Nothing to show yet</div>
-        Select at least one provider above and press <b>Start test</b>.
+        <div class="big" data-i18n="empty_title">Nothing to show yet</div>
+        <span data-i18n-html="empty_hint">Select at least one provider above and press <b>Start test</b>.</span>
       </div>
     </div>
   </section>
@@ -172,8 +203,8 @@
   <!-- ======== AI Analysis section ======== -->
   <section class="block reveal-3d">
     <div class="block-head">
-      <h2>Smart Analysis</h2>
-      <span class="hint">Free · no account needed · powered by your data</span>
+      <h2 data-i18n="section_analysis">Smart Analysis</h2>
+      <span class="hint" data-i18n="analysis_hint">Free · no account needed · powered by your data</span>
     </div>
 
     <div class="ai-panel">
@@ -185,23 +216,25 @@
               <circle cx="8" cy="8" r="6" stroke="#fff" stroke-width="1.4" fill="none" stroke-opacity="0.55"/>
             </svg>
           </div>
-          Ask anything about your results
+          <span data-i18n="ai_title">Ask anything about your results</span>
         </div>
 
-        <!-- AI engine badge — updates dynamically -->
+        <!-- AI engine badge -->
         <div class="ai-badges">
-          <span class="ai-badge ai-badge-free" id="aiBadgeFree" title="No API key needed">
+          <span class="ai-badge ai-badge-free" id="aiBadgeFree"
+                title="No API key needed">
             <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="currentColor" opacity="0.8"/></svg>
-            Smart Analysis · Free
+            <span data-i18n="ai_badge_free">Smart Analysis · Free</span>
           </span>
-          <span class="ai-badge ai-badge-claude" id="aiBadgeClaude" hidden title="Using Claude 3.5 Sonnet">
+          <span class="ai-badge ai-badge-claude" id="aiBadgeClaude" hidden
+                title="Using Claude 3.5 Sonnet">
             <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="currentColor" opacity="0.8"/></svg>
             claude-3-5-sonnet
           </span>
         </div>
       </div>
 
-      <!-- User location — shown only after successful IP lookup -->
+      <!-- User location -->
       <div class="ai-location-bar" id="aiLocationBar" hidden>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
@@ -214,21 +247,24 @@
       <div class="ai-body">
         <!-- quick-question chips -->
         <div class="ai-chips" role="group" aria-label="Quick questions">
-          <button class="ai-chip" data-q="Which region gives me the best latency based on my location?">Best for my location?</button>
-          <button class="ai-chip" data-q="Which region gives the lowest latency for users in Europe?">Best for Europe?</button>
-          <button class="ai-chip" data-q="Which region is best for users in Asia or the Middle East?">Best for Asia/ME?</button>
-          <button class="ai-chip" data-q="Compare the top 3 fastest regions in detail.">Compare top 3</button>
-          <button class="ai-chip" data-q="Which cloud provider gives the best overall latency across all their tested regions?">Best provider?</button>
-          <button class="ai-chip" data-q="What do the jitter values tell me? Which regions have the most stable connection?">Explain jitter</button>
+          <button class="ai-chip" data-q="Which region gives me the best latency based on my location?" data-i18n="chip_my_loc">Best for my location?</button>
+          <button class="ai-chip" data-q="Which region gives the lowest latency for users in Europe?" data-i18n="chip_europe">Best for Europe?</button>
+          <button class="ai-chip" data-q="Which region is best for users in Asia or the Middle East?" data-i18n="chip_asia">Best for Asia/ME?</button>
+          <button class="ai-chip" data-q="Compare the top 3 fastest regions in detail." data-i18n="chip_top3">Compare top 3</button>
+          <button class="ai-chip" data-q="Which cloud provider gives the best overall latency across all their tested regions?" data-i18n="chip_provider">Best provider?</button>
+          <button class="ai-chip" data-q="What do the jitter values tell me? Which regions have the most stable connection?" data-i18n="chip_jitter">Explain jitter</button>
         </div>
 
         <!-- prompt input -->
         <div class="ai-input-row">
           <label for="aiPromptInput" class="sr-only">Ask about your latency results</label>
           <textarea id="aiPromptInput" rows="2"
+            data-i18n-ph="ai_placeholder"
             placeholder="Ask anything about your latency results… (Ctrl+Enter to send)"
             aria-label="Ask about your latency results"></textarea>
-          <button class="ai-send-btn" id="aiSubmitBtn" title="Send (Ctrl+Enter)" aria-label="Send question">
+          <button class="ai-send-btn" id="aiSubmitBtn"
+                  data-i18n-title="aria_send" data-i18n-aria="aria_send"
+                  title="Send (Ctrl+Enter)" aria-label="Send question">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
             </svg>
@@ -238,26 +274,26 @@
         <!-- response area -->
         <div class="ai-response" id="aiResponse" aria-live="polite" aria-label="Analysis response"></div>
 
-        <!-- Claude optional upgrade — collapsed by default -->
+        <!-- Claude optional upgrade -->
         <details class="ai-claude-upgrade" id="aiClaudeUpgrade">
           <summary>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
-            Upgrade to Claude 3.5 Sonnet (optional)
+            <span data-i18n="ai_upgrade_title">Upgrade to Claude 3.5 Sonnet (optional)</span>
           </summary>
           <div class="ai-upgrade-body">
-            <p>For deeper analysis, add your Anthropic API key. Free smart analysis continues to work without it.</p>
+            <p data-i18n="ai_upgrade_desc">For deeper analysis, add your Anthropic API key. Free smart analysis continues to work without it.</p>
             <div class="ai-key-row">
               <label for="aiKeyInput" class="sr-only">Anthropic API key</label>
               <input type="password" id="aiKeyInput"
                 placeholder="sk-ant-api03-…" autocomplete="off" spellcheck="false"
                 aria-label="Anthropic API key">
-              <button class="ai-key-save" id="aiKeySave">Save</button>
+              <button class="ai-key-save" id="aiKeySave" data-i18n="btn_save">Save</button>
             </div>
             <div class="ai-key-status">
-              <span id="aiKeyDisplay">No key set</span>
-              <button class="ai-key-toggle" id="aiKeyClear" hidden>Remove</button>
+              <span id="aiKeyDisplay" data-i18n="no_key_set">No key set</span>
+              <button class="ai-key-toggle" id="aiKeyClear" data-i18n="btn_remove" hidden>Remove</button>
             </div>
-            <p class="ai-key-note">Key stored only in your browser's localStorage — never sent to our servers.</p>
+            <p class="ai-key-note" data-i18n="key_note">Key stored only in your browser's localStorage — never sent to our servers.</p>
           </div>
         </details>
       </div>
@@ -276,13 +312,14 @@
       by <a href="https://github.com/VarunAgw" target="_blank" rel="noopener">Varun Agrawal</a>.
     </div>
     <div>
-      Missing a provider or region?
-      <a href="https://github.com/VarunAgw/CloudPingTest/discussions" target="_blank" rel="noopener">Request it here</a>.
+      <span data-i18n="footer_missing">Missing a provider or region?</span>
+      <a href="https://github.com/VarunAgw/CloudPingTest/discussions" target="_blank" rel="noopener" data-i18n="footer_request">Request it here</a>.
     </div>
   </div>
 </footer>
 
+<script src="assets/i18n.js?v=1"></script>
 <script src="assets/data.js?v=7"></script>
-<script src="assets/app.js?v=7"></script>
+<script src="assets/app.js?v=8"></script>
 </body>
 </html>

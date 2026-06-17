@@ -1355,3 +1355,139 @@ html[data-theme="dark"] {
   .ai-input-row { flex-direction: column; align-items: stretch; }
   .ai-send-btn { width: 100%; height: 42px; border-radius: var(--radius-sm); }
 }
+
+/* ==============================================================
+   Language Picker
+   ============================================================== */
+
+.lang-picker {
+  position: relative;
+}
+
+.lang-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.lang-btn span { pointer-events: none; }
+
+.lang-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 300;
+  min-width: 180px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lift);
+  padding: 5px;
+  list-style: none;
+  margin: 0;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.lang-option {
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background 0.1s;
+  white-space: nowrap;
+}
+.lang-option:hover { background: var(--bg-soft); }
+.lang-option[aria-selected="true"] {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+/* ==============================================================
+   RTL Support (Arabic, Persian)
+   ============================================================== */
+
+[dir="rtl"] {
+  --font-main: "Vazirmatn", "Source Serif 4", Georgia, serif;
+}
+
+[dir="rtl"] body,
+[dir="rtl"] h1,
+[dir="rtl"] h2,
+[dir="rtl"] p,
+[dir="rtl"] button,
+[dir="rtl"] input,
+[dir="rtl"] textarea,
+[dir="rtl"] select,
+[dir="rtl"] label {
+  font-family: "Vazirmatn", ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0;
+}
+
+/* Header — keep logo on left, actions on right (flex naturally reverses in RTL) */
+[dir="rtl"] .site-header .wrap {
+  flex-direction: row-reverse;
+}
+[dir="rtl"] .header-actions {
+  flex-direction: row-reverse;
+}
+
+/* Lang menu opens to the left side in RTL */
+[dir="rtl"] .lang-menu {
+  right: auto;
+  left: 0;
+}
+
+/* Block heads */
+[dir="rtl"] .block-head { flex-direction: row-reverse; text-align: right; }
+[dir="rtl"] .mini-actions { flex-direction: row-reverse; }
+
+/* Controls row */
+[dir="rtl"] .controls { flex-direction: row-reverse; flex-wrap: wrap; }
+
+/* Run-line status */
+[dir="rtl"] .run-line { flex-direction: row-reverse; }
+
+/* Table */
+[dir="rtl"] table { direction: rtl; }
+[dir="rtl"] th, [dir="rtl"] td { text-align: right; }
+[dir="rtl"] td:first-child, [dir="rtl"] th:first-child { text-align: center; }
+
+/* AI panel */
+[dir="rtl"] .ai-panel-head { flex-direction: row-reverse; }
+[dir="rtl"] .ai-badges     { flex-direction: row-reverse; }
+[dir="rtl"] .ai-chips      { justify-content: flex-end; }
+[dir="rtl"] .ai-input-row  { flex-direction: row-reverse; }
+[dir="rtl"] .ai-location-bar { flex-direction: row-reverse; }
+[dir="rtl"] .ai-upgrade-body p { text-align: right; }
+[dir="rtl"] .ai-key-row   { flex-direction: row-reverse; }
+[dir="rtl"] .ai-key-status { flex-direction: row-reverse; }
+
+/* Hero text */
+[dir="rtl"] .hero-content  { text-align: right; }
+[dir="rtl"] .hero-stats    { justify-content: flex-start; }
+
+/* Footer */
+[dir="rtl"] .site-footer .wrap { text-align: right; }
+
+/* Podium */
+[dir="rtl"] .podium { flex-direction: row-reverse; }
+
+/* Provider grid cards */
+[dir="rtl"] .provider-card { text-align: right; }
+
+/* Empty note */
+[dir="rtl"] .empty-note { text-align: right; }
+
+/* Round picker */
+[dir="rtl"] .round-picker { flex-direction: row-reverse; }
+
+/* Block head hint */
+[dir="rtl"] .hint { text-align: right; }

@@ -32,6 +32,15 @@
     return n;
   };
 
+  /* ---------------- i18n helper ---------------- */
+
+  function t(key) {
+    const lang = document.documentElement.getAttribute("lang") || "en";
+    return window.TRANSLATIONS?.[lang]?.[key]
+        ?? window.TRANSLATIONS?.en?.[key]
+        ?? key;
+  }
+
   /* ---------------- config persistence ---------------- */
 
   function saveConfig() {
@@ -112,7 +121,7 @@
     if (!rows.length) { state.running = false; updateRunButton(); return; }
 
     // warm-up round: establishes DNS/TLS, results discarded
-    setRoundLabel("warm-up");
+    setRoundLabel(t("warmup_label"));
     for (let i = 0; i < rows.length; i++) {
       if (state.stopRequested) break;
       markTesting(rows[i], i, rows.length);
@@ -146,7 +155,7 @@
     const autoFinished = !state.stopRequested && limit > 0;
     clearTesting();
     state.running = false;
-    setRoundLabel(autoFinished ? "✓ done" : "stopped");
+    setRoundLabel(autoFinished ? t("done_label") : t("stopped_label"));
     $("#nowTesting").textContent = "–";
     $("#progressBar").style.width = "0%";
     updateRunButton();
@@ -214,7 +223,7 @@
       el("div", "tick", checkSVG)
     );
     const toggle = () => {
-      if (state.running) { toast("Stop the test before changing providers"); return; }
+      if (state.running) { toast(t("toast_stop_change")); return; }
       card.classList.toggle("on");
       const on = card.classList.contains("on");
       card.setAttribute("aria-checked", String(on));
@@ -418,10 +427,10 @@
     const btn = $("#runBtn");
     if (state.running) {
       btn.classList.add("running");
-      btn.innerHTML = "■ &nbsp;Stop test";
+      btn.innerHTML = t("btn_stop");
     } else {
       btn.classList.remove("running");
-      btn.innerHTML = "▶ &nbsp;Start test";
+      btn.innerHTML = t("btn_start");
     }
     // Show/hide round picker — only editable before test starts
     const wrap = $("#roundPickerWrap");
@@ -449,7 +458,7 @@
 
   function exportCSV() {
     const rows = state.rows.filter(r => r.stats);
-    if (!rows.length) { toast("No results to export yet"); return; }
+    if (!rows.length) { toast(t("toast_no_export")); return; }
     const head = "provider,region,location,code,median_ms,mean_ms,min_ms,max_ms,jitter_ms,samples";
     const lines = rows.map(r => [
       r.provider.name, `"${r.region.text2}"`, `"${r.region.text1}"`, r.region.code,
@@ -463,7 +472,7 @@
     a.download = "cloudping-results.csv";
     a.click();
     URL.revokeObjectURL(a.href);
-    toast("CSV downloaded");
+    toast(t("toast_csv_done"));
   }
 
   let toastTimer;
@@ -489,6 +498,54 @@
     if (wrap) wrap.hidden = state.running;
   }
 
+  /* ---------------- Language switcher ---------------- */
+
+  function initLang() {
+    const langBtn  = $("#langBtn");
+    const langMenu = $("#langMenu");
+    if (!langBtn || !langMenu) return;
+
+    // Apply initial language
+    const lang = window.detectLang ? window.detectLang() : "en";
+    window.applyTranslations && window.applyTranslations(lang);
+    updateRunButton(); // refresh button text after translation
+
+    // Toggle dropdown
+    langBtn.addEventListener("click", e => {
+      e.stopPropagation();
+      const open = langMenu.hidden === false;
+      langMenu.hidden = open;
+      langBtn.setAttribute("aria-expanded", String(!open));
+    });
+
+    // Language selection
+    langMenu.addEventListener("click", e => {
+      const li = e.target.closest(".lang-option");
+      if (!li) return;
+      const chosen = li.dataset.lang;
+      langMenu.hidden = true;
+      langBtn.setAttribute("aria-expanded", "false");
+      if (!chosen) return;
+      localStorage.setItem("cloudping.lang", chosen);
+      window.applyTranslations && window.applyTranslations(chosen);
+      updateRunButton(); // refresh dynamic button text
+    });
+
+    // Close on outside click
+    document.addEventListener("click", () => {
+      langMenu.hidden = true;
+      langBtn.setAttribute("aria-expanded", "false");
+    });
+
+    // Keyboard: Escape closes menu
+    langMenu.addEventListener("keydown", e => {
+      if (e.key === "Escape") {
+        langMenu.hidden = true;
+        langBtn.focus();
+      }
+    });
+  }
+
   function init() {
     loadConfig();
     renderProviders();
@@ -500,19 +557,19 @@
       if (state.running) {
         state.stopRequested = true;
       } else {
-        if (!state.selected.size) { toast("Pick at least one provider first"); return; }
+        if (!state.selected.size) { toast(t("toast_no_provider")); return; }
         runLoop();
       }
       updateRunButton();
     });
 
     $("#selAll").addEventListener("click", () => {
-      if (state.running) { toast("Stop the test first"); return; }
+      if (state.running) { toast(t("toast_stop_first")); return; }
       PROVIDERS.forEach(p => state.selected.add(p.id));
       renderProviders(); updateCounters(); saveConfig();
     });
     $("#selNone").addEventListener("click", () => {
-      if (state.running) { toast("Stop the test first"); return; }
+      if (state.running) { toast(t("toast_stop_first")); return; }
       state.selected.clear();
       renderProviders(); updateCounters(); saveConfig();
     });
@@ -538,6 +595,8 @@
     });
 
     $("#exportBtn").addEventListener("click", exportCSV);
+
+    initLang();
 
     $("#headRow").addEventListener("click", e => {
       const th = e.target.closest("th");
@@ -1167,12 +1226,12 @@ Give precise, actionable advice. Reference specific millisecond values from the 
     /* Claude optional key management */
     const saveKey = () => {
       const v = keyInput?.value?.trim() || "";
-      if (v) { aiSetKey(v); if (keyInput) keyInput.value = ""; toast("Claude API key saved"); }
+      if (v) { aiSetKey(v); if (keyInput) keyInput.value = ""; toast(t("toast_key_saved")); }
     };
     keySave?.addEventListener("click", saveKey);
     keyInput?.addEventListener("keydown", e => { if (e.key === "Enter") saveKey(); });
     const keyClear = $("#aiKeyClear");
-    keyClear?.addEventListener("click", () => { aiSetKey(""); toast("API key removed"); });
+    keyClear?.addEventListener("click", () => { aiSetKey(""); toast(t("toast_key_removed")); });
 
     // Pre-warm geo cache (non-blocking)
     detectUserGeo().then(geo => updateLocationBar(geo));
