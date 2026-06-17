@@ -629,9 +629,19 @@
   async function detectUserGeo() {
     if (_geoCtx) return _geoCtx;
 
-    // Try multiple free geo APIs in priority order (no API key needed for any)
     const result =
-      // 1. ipwho.is — works globally, HTTPS, no key
+      // 1. ipgeolocation.io — primary, accurate, works in Iran
+      await tryGeoSource(
+        "https://api.ipgeolocation.io/ipgeo?apiKey=f7de01fd7a5b4caeabc74405171d56f8",
+        d => d.ip ? {
+          ip: d.ip, city: d.city, region: d.state_prov,
+          country: d.country_name, countryCode: d.country_code2,
+          isp: d.isp || d.organization || "",
+          lat: parseFloat(d.latitude), lon: parseFloat(d.longitude),
+          timezone: d.time_zone?.name || ""
+        } : null
+      ) ||
+      // 2. ipwho.is — fallback, no key
       await tryGeoSource("https://ipwho.is/", d =>
         d.success ? {
           ip: d.ip, city: d.city, region: d.region,
@@ -640,7 +650,7 @@
           lat: d.latitude, lon: d.longitude, timezone: d.timezone?.id || ""
         } : null
       ) ||
-      // 2. freeipapi.com — generous free tier, no key
+      // 3. freeipapi.com — fallback, no key
       await tryGeoSource("https://freeipapi.com/api/json", d =>
         d.ipVersion ? {
           ip: d.ipAddress, city: d.cityName, region: d.regionName,
@@ -648,7 +658,7 @@
           isp: "", lat: d.latitude, lon: d.longitude, timezone: d.timeZone || ""
         } : null
       ) ||
-      // 3. ip-api.com — fast but may be blocked in some regions
+      // 4. ip-api.com — last resort (may be blocked in some regions)
       await tryGeoSource(
         "https://ip-api.com/json/?fields=status,country,countryCode,regionName,city,isp,org,lat,lon,query",
         d => d.status === "success" ? {
@@ -659,7 +669,6 @@
       );
 
     if (!result) return null;
-
     _geoCtx = { ...result, geoRegion: classifyGeoRegion(result.lat, result.lon) };
     return _geoCtx;
   }
