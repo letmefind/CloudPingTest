@@ -172,67 +172,94 @@
   <!-- ======== AI Analysis section ======== -->
   <section class="block reveal-3d">
     <div class="block-head">
-      <h2>AI Analysis</h2>
-      <span class="hint">Ask Claude about your results</span>
+      <h2>Smart Analysis</h2>
+      <span class="hint">Free · no account needed · powered by your data</span>
     </div>
 
     <div class="ai-panel">
       <div class="ai-panel-head">
         <div class="ai-title">
-          <!-- Simple "signal" mark — two concentric arcs -->
           <div class="ai-logo" aria-hidden="true">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <circle cx="8" cy="8" r="3" fill="#fff"/>
               <circle cx="8" cy="8" r="6" stroke="#fff" stroke-width="1.4" fill="none" stroke-opacity="0.55"/>
             </svg>
           </div>
-          Ask Claude about your results
+          Ask anything about your results
         </div>
-        <span class="ai-badge">claude-3-5-sonnet</span>
+
+        <!-- AI engine badge — updates dynamically -->
+        <div class="ai-badges">
+          <span class="ai-badge ai-badge-free" id="aiBadgeFree" title="No API key needed">
+            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="currentColor" opacity="0.8"/></svg>
+            Smart Analysis · Free
+          </span>
+          <span class="ai-badge ai-badge-claude" id="aiBadgeClaude" hidden title="Using Claude 3.5 Sonnet">
+            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="currentColor" opacity="0.8"/></svg>
+            claude-3-5-sonnet
+          </span>
+        </div>
+      </div>
+
+      <!-- User location — filled by JS after IP lookup -->
+      <div class="ai-location-bar" id="aiLocationBar" hidden>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+          <circle cx="12" cy="10" r="3"/>
+        </svg>
+        <span id="aiLocationText">Detecting location…</span>
+        <span class="ai-location-isp" id="aiLocationISP"></span>
       </div>
 
       <div class="ai-body">
         <!-- quick-question chips -->
         <div class="ai-chips" role="group" aria-label="Quick questions">
+          <button class="ai-chip" data-q="Which region gives me the best latency based on my location?">Best for my location?</button>
           <button class="ai-chip" data-q="Which region gives the lowest latency for users in Europe?">Best for Europe?</button>
           <button class="ai-chip" data-q="Which region is best for users in Asia or the Middle East?">Best for Asia/ME?</button>
-          <button class="ai-chip" data-q="Compare the top 3 fastest regions and explain why one might be better than another.">Compare top 3</button>
+          <button class="ai-chip" data-q="Compare the top 3 fastest regions in detail.">Compare top 3</button>
           <button class="ai-chip" data-q="Which cloud provider gives the best overall latency across all their tested regions?">Best provider?</button>
           <button class="ai-chip" data-q="What do the jitter values tell me? Which regions have the most stable connection?">Explain jitter</button>
         </div>
 
-        <!-- prompt input — monospace/terminal style -->
+        <!-- prompt input -->
         <div class="ai-input-row">
-          <label for="aiPromptInput" class="sr-only">Ask Claude about your results</label>
+          <label for="aiPromptInput" class="sr-only">Ask about your latency results</label>
           <textarea id="aiPromptInput" rows="2"
             placeholder="Ask anything about your latency results… (Ctrl+Enter to send)"
-            aria-label="Ask Claude about your results"></textarea>
-          <button class="ai-send-btn" id="aiSubmitBtn" title="Send (Ctrl+Enter)" aria-label="Send question" disabled>
+            aria-label="Ask about your latency results"></textarea>
+          <button class="ai-send-btn" id="aiSubmitBtn" title="Send (Ctrl+Enter)" aria-label="Send question">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
             </svg>
           </button>
         </div>
 
-        <!-- streaming response — annotation/margin-note aesthetic -->
-        <div class="ai-response" id="aiResponse" aria-live="polite" aria-label="Claude response"></div>
+        <!-- response area -->
+        <div class="ai-response" id="aiResponse" aria-live="polite" aria-label="Analysis response"></div>
 
-        <!-- key management footer -->
-        <div class="ai-key-bar">
-          <span class="lbl">API key:</span>
-          <span class="ai-key-display" id="aiKeyDisplay">No key set</span>
-          <button class="ai-key-toggle" id="aiKeyToggle">change</button>
-        </div>
-        <div class="ai-key-row" id="aiKeyRow" hidden>
-          <label for="aiKeyInput" class="sr-only">Anthropic API key</label>
-          <input type="password" id="aiKeyInput"
-            placeholder="sk-ant-api03-…" autocomplete="off" spellcheck="false"
-            aria-label="Anthropic API key" aria-describedby="aiKeyNote">
-          <button class="ai-key-save" id="aiKeySave">Save</button>
-        </div>
-        <p class="ai-key-note" id="aiKeyNote">
-          Stored only in your browser's localStorage · sent directly to Anthropic · never shared.
-        </p>
+        <!-- Claude optional upgrade — collapsed by default -->
+        <details class="ai-claude-upgrade" id="aiClaudeUpgrade">
+          <summary>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+            Upgrade to Claude 3.5 Sonnet (optional)
+          </summary>
+          <div class="ai-upgrade-body">
+            <p>For deeper analysis, add your Anthropic API key. Free smart analysis continues to work without it.</p>
+            <div class="ai-key-row">
+              <label for="aiKeyInput" class="sr-only">Anthropic API key</label>
+              <input type="password" id="aiKeyInput"
+                placeholder="sk-ant-api03-…" autocomplete="off" spellcheck="false"
+                aria-label="Anthropic API key">
+              <button class="ai-key-save" id="aiKeySave">Save</button>
+            </div>
+            <div class="ai-key-status">
+              <span id="aiKeyDisplay">No key set</span>
+              <button class="ai-key-toggle" id="aiKeyClear" hidden>Remove</button>
+            </div>
+            <p class="ai-key-note">Key stored only in your browser's localStorage — never sent to our servers.</p>
+          </div>
+        </details>
       </div>
     </div>
   </section>

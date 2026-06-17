@@ -1038,6 +1038,14 @@ html[data-theme="dark"] {
   overflow: hidden;
 }
 
+/* Multiple badge support */
+.ai-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 .ai-panel-head {
   display: flex;
   align-items: center;
@@ -1071,6 +1079,9 @@ html[data-theme="dark"] {
 .ai-logo svg { width: 16px; height: 16px; fill: #fff; flex: none; }
 
 .ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-family: var(--font-mono);
   font-size: 11.5px;
   letter-spacing: 0.04em;
@@ -1079,6 +1090,64 @@ html[data-theme="dark"] {
   border: 1px solid var(--ai-line);
   padding: 3px 10px;
   border-radius: 999px;
+}
+.ai-badge-free  { color: var(--good); background: color-mix(in srgb, var(--good) 10%, transparent); border-color: color-mix(in srgb, var(--good) 25%, transparent); }
+.ai-badge-claude { color: var(--ai); }
+
+/* Location bar */
+.ai-location-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 22px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  background: color-mix(in srgb, var(--bg-soft) 60%, transparent);
+  border-bottom: 1px solid var(--ai-line);
+}
+.ai-location-bar svg { color: var(--ai); flex: none; }
+.ai-location-isp { color: var(--ink-3); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Claude upgrade section — subtle collapsible */
+.ai-claude-upgrade {
+  margin-top: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+}
+.ai-claude-upgrade summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.ai-claude-upgrade summary::-webkit-details-marker { display: none; }
+.ai-claude-upgrade summary svg { color: var(--ink-3); flex: none; }
+.ai-claude-upgrade summary:hover { color: var(--ink); }
+
+.ai-upgrade-body {
+  padding: 4px 14px 16px;
+}
+.ai-upgrade-body p {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+.ai-key-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
 }
 
 .ai-body { padding: 22px 24px 20px; }

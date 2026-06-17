@@ -560,8 +560,10 @@
   document.addEventListener("DOMContentLoaded", init);
 
   /* ==============================================================
-     Claude 3.5 Sonnet — AI analysis integration
-     Direct browser→Anthropic API call. Key stored in localStorage.
+     SMART ANALYSIS ENGINE — Free, no API key required
+     - IP geolocation via ip-api.com (free, no key)
+     - Intelligent JS analysis of ping data + user location context
+     - Optional Claude 3.5 Sonnet upgrade (user-provided API key)
      ============================================================== */
 
   const CLAUDE_MODEL  = "claude-3-5-sonnet-20241022";
@@ -569,7 +571,9 @@
   const AI_LS_KEY     = "cloudping.ai.key.v1";
 
   let _aiKey = "";
+  let _geoCtx = null; // cached IP geolocation result
 
+  /* ── Claude API key helpers ── */
   function aiGetKey() {
     if (!_aiKey) _aiKey = localStorage.getItem(AI_LS_KEY) || "";
     return _aiKey;
@@ -589,9 +593,315 @@
       disp.textContent = k ? `sk-ant-…${k.slice(-4)}` : "No key set";
       disp.dataset.set = k ? "1" : "";
     }
-    // enable/disable send button based on key presence
+    // Show which badge is active (smart always shows; claude badge if key set)
+    const badgeFree   = $("#aiBadgeFree");
+    const badgeClaude = $("#aiBadgeClaude");
+    if (badgeFree)   badgeFree.hidden   = !!k;
+    if (badgeClaude) badgeClaude.hidden = !k;
+    // Button is ALWAYS enabled — smart analysis works without key
     const btn = $("#aiSubmitBtn");
-    if (btn) btn.disabled = !k;
+    if (btn) btn.disabled = false;
+    // Clear button in upgrade section
+    const clearBtn = $("#aiKeyClear");
+    if (clearBtn) clearBtn.hidden = !k;
+  }
+
+  /* ── IP Geolocation (free, no API key) ── */
+  async function detectUserGeo() {
+    if (_geoCtx) return _geoCtx;
+    try {
+      const res = await fetch(
+        "https://ip-api.com/json/?fields=status,country,countryCode,regionName,city,isp,org,lat,lon,timezone,query",
+        { cache: "force-cache" }
+      );
+      if (!res.ok) return null;
+      const d = await res.json();
+      if (d.status !== "success") return null;
+      // Classify broad geographic region
+      const geo = classifyGeoRegion(d.lat, d.lon, d.countryCode);
+      _geoCtx = {
+        ip: d.query, city: d.city, region: d.regionName,
+        country: d.country, countryCode: d.countryCode,
+        isp: d.isp || d.org || "",
+        lat: d.lat, lon: d.lon, timezone: d.timezone,
+        geoRegion: geo
+      };
+      return _geoCtx;
+    } catch { return null; }
+  }
+
+  function classifyGeoRegion(lat, lon) {
+    if (lat > 12 && lat < 40 && lon > 35 && lon < 65) return "Middle East";
+    if (lat > 35 && lat < 72 && lon > -12 && lon < 45) return "Europe";
+    if (lat > -10 && lat < 40 && lon > 25 && lon < 55) return "Africa/East";
+    if (lat > -35 && lat < 15 && lon > -20 && lon < 52) return "Africa";
+    if (lat > 10 && lat < 72 && lon > 60 && lon < 145) return "Asia";
+    if (lat > -45 && lat < -10 && lon > 110 && lon < 178) return "Oceania";
+    if (lat > 15 && lat < 72 && lon > -130 && lon < -60) return "North America";
+    if (lat > -55 && lat < 15 && lon > -82 && lon < -35) return "South America";
+    return "Global";
+  }
+
+  function updateLocationBar(geo) {
+    const bar  = $("#aiLocationBar");
+    const txt  = $("#aiLocationText");
+    const isp  = $("#aiLocationISP");
+    if (!bar || !txt) return;
+    if (!geo) { bar.hidden = true; return; }
+    txt.textContent = `${geo.city ? geo.city + ", " : ""}${geo.country}`;
+    if (isp && geo.isp) isp.textContent = "· " + geo.isp.replace(/^AS\d+\s+/, "").slice(0, 40);
+    bar.hidden = false;
+  }
+
+  /* ── Geographic region classification for result rows ── */
+  function rowGeoRegion(row) {
+    const haystack = (row.region.text1 + " " + row.region.text2 + " " + row.region.code).toLowerCase();
+    if (/dubai|bahrain|uae|riyadh|abu dhabi|oman|kuwait|qatar|manama|middle east|jeddah/.test(haystack)) return "Middle East";
+    if (/europe|frankfurt|ireland|paris|london|amsterdam|stockholm|milan|zurich|madrid|warsaw|eu-|uk\b/.test(haystack)) return "Europe";
+    if (/singapore|tokyo|sydney|mumbai|seoul|osaka|taiwan|hong kong|jakarta|bangkok|delhi|pune|chennai|hyderabad|ap-|asia/.test(haystack)) return "Asia Pacific";
+    if (/us east|us west|virginia|ohio|oregon|california|canada|montreal|toronto|iowa|sao paulo|brazil|chile|south america|sa-|ca-|us-/.test(haystack)) return "Americas";
+    if (/johannesburg|cape town|africa/.test(haystack)) return "Africa";
+    if (/australia|melbourne|auckland/.test(haystack)) return "Oceania";
+    return "Global";
+  }
+
+  /* ── Latency quality labels ── */
+  function latLabel(ms) {
+    if (ms <  20) return "Excellent";
+    if (ms <  50) return "Very Good";
+    if (ms < 100) return "Good";
+    if (ms < 200) return "Fair";
+    return "High";
+  }
+  function jitterLabel(ms) {
+    if (ms <  5) return "Very stable";
+    if (ms < 15) return "Stable";
+    if (ms < 30) return "Moderate";
+    return "Variable";
+  }
+
+  /* ================================================================
+     SMART ANALYSIS ENGINE — deterministic, always free, no LLM needed
+     ================================================================ */
+
+  function smartAnalyze(question, geo) {
+    const allRows = state.rows.filter(r => r.stats && r.stats.median > 0);
+    if (!allRows.length) {
+      return `<p class="ai-error">Run a latency test first — no data to analyze yet.</p>`;
+    }
+
+    const q = question.toLowerCase();
+    const sorted  = [...allRows].sort((a, b) => a.stats.median - b.stats.median);
+    const byJitter = [...allRows].sort((a, b) => a.stats.jitter - b.stats.jitter);
+
+    /* ── Intent detection ── */
+    const wantsJitter   = /jitter|stable|reliab|consist|fluctuat/.test(q);
+    const wantsProvider = /provider|cloud(?! region)|aws|azure|gcp|which cloud/.test(q);
+    const wantsMyLoc    = /my loc|for me|nearest|closest|where i am/.test(q);
+    const geoFilter     = q.match(/\b(europe|asia|middle east|me\b|us(?:a)?\b|america|africa|australia|oceania)\b/i)?.[1];
+    const wantsTop3     = /top 3|compare/.test(q);
+
+    /* ── Header with location context ── */
+    let md = "";
+    if (geo) {
+      md += `Based on your location in **${geo.city ? geo.city + ", " : ""}${geo.country}**`;
+      if (geo.isp) md += ` (${geo.isp.replace(/^AS\d+\s+/, "").slice(0, 50)})`;
+      md += ` and **${state.round || 0}** round(s) across **${allRows.length}** region(s):\n\n`;
+    } else {
+      md += `**${state.round || 0}** round(s) completed · **${allRows.length}** region(s) measured:\n\n`;
+    }
+
+    /* ── Provider ranking ── */
+    const provMap = {};
+    allRows.forEach(r => {
+      const key = r.provider.name;
+      if (!provMap[key]) provMap[key] = { medians: [], jitters: [], count: 0 };
+      provMap[key].medians.push(r.stats.median);
+      provMap[key].jitters.push(r.stats.jitter);
+      provMap[key].count++;
+    });
+    const provRanked = Object.entries(provMap)
+      .map(([name, d]) => ({
+        name,
+        avg: d.medians.reduce((a, b) => a + b, 0) / d.medians.length,
+        best: Math.min(...d.medians),
+        avgJitter: d.jitters.reduce((a, b) => a + b, 0) / d.jitters.length,
+        count: d.count
+      }))
+      .sort((a, b) => a.avg - b.avg);
+
+    /* ── Section: Jitter / stability ── */
+    if (wantsJitter) {
+      md += `## Connection Stability (Jitter Analysis)\n\n`;
+      md += `Jitter measures how consistent your connection is — lower is more reliable.\n\n`;
+      md += `**Most stable regions:**\n\n`;
+      byJitter.slice(0, 5).forEach((r, i) => {
+        md += `${i + 1}. **${r.provider.name} ${r.region.text2}** \`${r.region.code}\` — `
+          + `Jitter **${Math.round(r.stats.jitter)}ms** (${jitterLabel(r.stats.jitter)}) · `
+          + `Median ${Math.round(r.stats.median)}ms\n`;
+      });
+      md += `\n**Most variable regions:**\n\n`;
+      [...byJitter].reverse().slice(0, 3).forEach((r, i) => {
+        md += `${i + 1}. ${r.provider.name} ${r.region.text2} — Jitter ${Math.round(r.stats.jitter)}ms (${jitterLabel(r.stats.jitter)})\n`;
+      });
+      if (geo) {
+        const near = byJitter.find(r => rowGeoRegion(r) === geo.geoRegion);
+        if (near) md += `\n**Most stable in your region (${geo.geoRegion}):** ${near.provider.name} ${near.region.text2} at ${Math.round(near.stats.jitter)}ms jitter.`;
+      }
+      return aiRenderMarkdown(md);
+    }
+
+    /* ── Section: Provider comparison ── */
+    if (wantsProvider) {
+      md += `## Cloud Provider Ranking\n\n`;
+      provRanked.forEach((p, i) => {
+        md += `${i + 1}. **${p.name}** — avg **${Math.round(p.avg)}ms** · best region ${Math.round(p.best)}ms · ${p.count} regions tested\n`;
+      });
+      md += `\n**Winner:** ${provRanked[0].name} leads with an average of **${Math.round(provRanked[0].avg)}ms**. `;
+      if (provRanked.length > 1) {
+        md += `${provRanked[1].name} follows at ${Math.round(provRanked[1].avg)}ms.`;
+      }
+      return aiRenderMarkdown(md);
+    }
+
+    /* ── Section: Geo-filtered results ── */
+    if (geoFilter) {
+      const geoMap = {
+        europe: "Europe", asia: "Asia Pacific",
+        "middle east": "Middle East", me: "Middle East",
+        us: "Americas", usa: "Americas", america: "Americas",
+        africa: "Africa", australia: "Oceania", oceania: "Oceania"
+      };
+      const targetRegion = geoMap[geoFilter.toLowerCase()] || geoFilter;
+      const filtered = sorted.filter(r => rowGeoRegion(r).toLowerCase().includes(targetRegion.toLowerCase()));
+
+      if (!filtered.length) {
+        md += `No results found for **${targetRegion}** in your tested regions. Run the test with providers that cover this area.`;
+      } else {
+        md += `## Best Regions for ${targetRegion}\n\n`;
+        filtered.slice(0, 5).forEach((r, i) => {
+          md += `${i + 1}. **${r.provider.name} ${r.region.text2}** \`${r.region.code}\` — `
+            + `**${Math.round(r.stats.median)}ms** (${latLabel(r.stats.median)}) · `
+            + `Jitter ${Math.round(r.stats.jitter)}ms · Min ${Math.round(r.stats.min)}ms\n`;
+        });
+        const best = filtered[0];
+        md += `\n**Best option:** ${best.provider.name} ${best.region.text2} at **${Math.round(best.stats.median)}ms** — ${latLabel(best.stats.median)} latency`;
+        if (best.stats.jitter < 10) md += `, very stable connection`;
+        md += `.`;
+      }
+      return aiRenderMarkdown(md);
+    }
+
+    /* ── Section: Top 3 detail comparison ── */
+    if (wantsTop3) {
+      const top3 = sorted.slice(0, 3);
+      md += `## Top 3 Regions — Detailed Comparison\n\n`;
+      top3.forEach((r, i) => {
+        const spread = r.stats.max - r.stats.min;
+        md += `### ${i + 1}. ${r.provider.name} · ${r.region.text2} (${r.region.text1})\n\n`;
+        md += `- **Region code:** \`${r.region.code}\`\n`;
+        md += `- **Median latency:** ${Math.round(r.stats.median)}ms — ${latLabel(r.stats.median)}\n`;
+        md += `- **Min / Max:** ${Math.round(r.stats.min)}ms / ${Math.round(r.stats.max)}ms (spread: ${Math.round(spread)}ms)\n`;
+        md += `- **Jitter:** ${Math.round(r.stats.jitter)}ms — ${jitterLabel(r.stats.jitter)}\n`;
+        md += `- **Geographic zone:** ${rowGeoRegion(r)}\n\n`;
+      });
+      const winner = top3[0];
+      md += `**Recommendation:** ${winner.provider.name} ${winner.region.text2} is your fastest overall.`;
+      if (top3[0].stats.jitter > top3[1].stats.jitter && top3[1].stats.median < top3[0].stats.median * 1.15) {
+        md += ` For maximum stability, consider ${top3[1].provider.name} ${top3[1].region.text2} — slightly slower but more consistent (${Math.round(top3[1].stats.jitter)}ms vs ${Math.round(top3[0].stats.jitter)}ms jitter).`;
+      }
+      return aiRenderMarkdown(md);
+    }
+
+    /* ── Default: comprehensive overview ── */
+    const top5 = sorted.slice(0, 5);
+    const nearRegion = geo ? geo.geoRegion : null;
+    const nearRows   = nearRegion ? sorted.filter(r => rowGeoRegion(r) === nearRegion) : [];
+
+    md += `## Top 5 Fastest Regions\n\n`;
+    top5.forEach((r, i) => {
+      md += `${i + 1}. **${r.provider.name} ${r.region.text2}** \`${r.region.code}\` — `
+        + `**${Math.round(r.stats.median)}ms** (${latLabel(r.stats.median)}) · `
+        + `Jitter ${Math.round(r.stats.jitter)}ms · ${rowGeoRegion(r)}\n`;
+    });
+
+    md += `\n## Best Cloud Provider Overall\n\n`;
+    md += `**${provRanked[0].name}** leads at avg **${Math.round(provRanked[0].avg)}ms** across ${provRanked[0].count} regions. `;
+    if (provRanked[1]) md += `${provRanked[1].name} is second at ${Math.round(provRanked[1].avg)}ms.`;
+
+    if (nearRows.length > 0 && geo) {
+      md += `\n\n## Closest Regions to You (${geo.geoRegion})\n\n`;
+      nearRows.slice(0, 3).forEach((r, i) => {
+        md += `${i + 1}. **${r.provider.name} ${r.region.text2}** — ${Math.round(r.stats.median)}ms (${latLabel(r.stats.median)})\n`;
+      });
+    }
+
+    const mostStable = byJitter[0];
+    md += `\n## Most Stable Connection\n\n`;
+    md += `**${mostStable.provider.name} ${mostStable.region.text2}** has the lowest jitter at `
+      + `${Math.round(mostStable.stats.jitter)}ms — ${jitterLabel(mostStable.stats.jitter)}. `
+      + `Best for real-time applications (video calls, gaming, trading).`;
+
+    // Internet quality summary based on best result
+    const best = sorted[0];
+    md += `\n\n## Your Internet Quality to the Cloud\n\n`;
+    if (best.stats.median < 30) {
+      md += `Your fastest connection (**${Math.round(best.stats.median)}ms**) is excellent — you're well-connected to regional cloud infrastructure.`;
+    } else if (best.stats.median < 80) {
+      md += `Your fastest connection (**${Math.round(best.stats.median)}ms**) is very good for real-world use.`;
+    } else {
+      md += `Your fastest measured connection is **${Math.round(best.stats.median)}ms**. This may reflect geographic distance to tested regions — providers in your area may perform better.`;
+    }
+    if (geo?.isp) {
+      md += ` Connection is via **${geo.isp.replace(/^AS\d+\s+/, "").slice(0, 60)}**.`;
+    }
+
+    return aiRenderMarkdown(md);
+  }
+
+  /* ── Analysis dispatcher: Smart Analysis (free) or Claude (optional) ── */
+  async function doAnalysis(question) {
+    const box = $("#aiResponse");
+    const btn = $("#aiSubmitBtn");
+
+    box.innerHTML = "";
+    box.classList.add("streaming");
+    box.classList.remove("has-content");
+    if (btn) btn.disabled = true;
+
+    // Show blinking cursor while working
+    const cursor = document.createElement("span");
+    cursor.className = "ai-cursor";
+    box.appendChild(cursor);
+
+    try {
+      const hasClaudeKey = !!aiGetKey();
+
+      if (hasClaudeKey) {
+        // Premium path — Claude streaming
+        await aiCallClaude(question);
+        return; // Claude manages its own UI
+      }
+
+      // Free path — Smart Analysis (instant)
+      // Fetch geo context (may already be cached)
+      const geo = await detectUserGeo();
+      updateLocationBar(geo);
+
+      // Small delay for UX (feels like it's thinking)
+      await new Promise(r => setTimeout(r, 350));
+
+      const html = smartAnalyze(question, geo);
+      box.innerHTML = html;
+      box.classList.remove("streaming");
+      box.classList.add("has-content");
+    } catch (err) {
+      box.innerHTML = `<span class="ai-error">⚠ ${err.message}</span>`;
+      box.classList.remove("streaming");
+      box.classList.add("has-content");
+    } finally {
+      if (btn) btn.disabled = false;
+    }
   }
 
   /* Build a compact text summary of current results for the system prompt */
@@ -762,11 +1072,9 @@ Give precise, actionable advice. Reference specific millisecond values from the 
     const keyInput   = $("#aiKeyInput");
     const keySave    = $("#aiKeySave");
     const keyToggle  = $("#aiKeyToggle");
-    const keyRow     = $("#aiKeyRow");
-
     if (!promptEl) return;
 
-    /* quick chips → fill textarea */
+    /* Quick chips → fill textarea */
     document.querySelectorAll(".ai-chip").forEach(chip => {
       chip.addEventListener("click", () => {
         promptEl.value = chip.dataset.q;
@@ -774,43 +1082,29 @@ Give precise, actionable advice. Reference specific millisecond values from the 
       });
     });
 
-    /* submit: click or Ctrl/Cmd+Enter */
+    /* Submit */
     const doSend = () => {
       const q = promptEl.value.trim();
       if (!q) return;
-      aiCallClaude(q);
+      doAnalysis(q);
     };
-
     submitBtn?.addEventListener("click", doSend);
     promptEl.addEventListener("keydown", e => {
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doSend(); }
     });
 
-    /* key management */
-    keyToggle?.addEventListener("click", () => {
-      if (keyRow) {
-        keyRow.hidden = !keyRow.hidden;
-        if (!keyRow.hidden) keyInput?.focus();
-      }
-    });
-
+    /* Claude optional key management */
     const saveKey = () => {
-      const v = keyInput?.value || "";
-      if (v.trim()) {
-        aiSetKey(v);
-        if (keyRow) keyRow.hidden = true;
-        toast("API key saved");
-      }
+      const v = keyInput?.value?.trim() || "";
+      if (v) { aiSetKey(v); if (keyInput) keyInput.value = ""; toast("Claude API key saved"); }
     };
-
     keySave?.addEventListener("click", saveKey);
-    keyInput?.addEventListener("keydown", e => {
-      if (e.key === "Enter") saveKey();
-      if (e.key === "Escape" && keyRow) keyRow.hidden = true;
-    });
+    keyInput?.addEventListener("keydown", e => { if (e.key === "Enter") saveKey(); });
+    const keyClear = $("#aiKeyClear");
+    keyClear?.addEventListener("click", () => { aiSetKey(""); toast("API key removed"); });
 
-    // If a key is already stored, reveal the send button immediately
-    aiUpdateKeyUI();
+    // Pre-warm geo cache (non-blocking)
+    detectUserGeo().then(geo => updateLocationBar(geo));
   }
 
   document.addEventListener("DOMContentLoaded", initAI);
