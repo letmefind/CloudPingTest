@@ -26,27 +26,62 @@
   </div>
 </header>
 
-<section class="hero">
-  <svg class="radar" viewBox="0 0 420 420" aria-hidden="true">
+<section class="hero" id="heroSection">
+
+  <!-- Layer 0 — cinematic perspective grid floor -->
+  <div class="hero-grid" aria-hidden="true"></div>
+
+  <!-- Layer 1 — floating depth orbs (slow parallax) -->
+  <div class="hero-orbs" aria-hidden="true">
+    <span class="orb orb-1"></span>
+    <span class="orb orb-2"></span>
+    <span class="orb orb-3"></span>
+    <span class="orb orb-4"></span>
+  </div>
+
+  <!-- Layer 2 — floating provider icons at different Z depths -->
+  <div class="hero-floats" id="heroFloats" aria-hidden="true">
+    <span class="float-chip float-1" data-depth="0.6">AWS</span>
+    <span class="float-chip float-2" data-depth="0.3">GCP</span>
+    <span class="float-chip float-3" data-depth="0.8">Azure</span>
+    <span class="float-chip float-4" data-depth="0.4">DO</span>
+    <span class="float-chip float-5" data-depth="0.7">OCI</span>
+    <span class="float-chip float-6" data-depth="0.25">Vultr</span>
+  </div>
+
+  <!-- Layer 3 — radar (medium parallax) -->
+  <svg class="radar" id="heroRadar" viewBox="0 0 420 420" aria-hidden="true">
+    <defs>
+      <linearGradient id="sweepGrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#d97757" stop-opacity="0.45"/>
+        <stop offset="100%" stop-color="#d97757" stop-opacity="0"/>
+      </linearGradient>
+      <radialGradient id="blipGlow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#d97757" stop-opacity="0.9"/>
+        <stop offset="100%" stop-color="#d97757" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
     <circle class="ring" cx="210" cy="210" r="70"  stroke-width="1.5"/>
     <circle class="ring" cx="210" cy="210" r="125" stroke-width="1.2"/>
     <circle class="ring" cx="210" cy="210" r="180" stroke-width="1"/>
+    <!-- Cross-hairs -->
+    <line x1="210" y1="30" x2="210" y2="390" stroke="#d97757" stroke-opacity="0.12" stroke-width="1"/>
+    <line x1="30"  y1="210" x2="390" y2="210" stroke="#d97757" stroke-opacity="0.12" stroke-width="1"/>
     <g class="sweep">
       <path d="M210 210 L210 26 A184 184 0 0 1 318 62 Z" fill="url(#sweepGrad)"/>
     </g>
-    <defs>
-      <linearGradient id="sweepGrad" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#d97757" stop-opacity="0.35"/>
-        <stop offset="100%" stop-color="#d97757" stop-opacity="0"/>
-      </linearGradient>
-    </defs>
+    <!-- Blips with glow -->
+    <circle cx="265" cy="130" r="14" fill="url(#blipGlow)" class="blip-glow"/>
     <circle class="blip" cx="265" cy="130" r="5"/>
+    <circle cx="150" cy="265" r="12" fill="url(#blipGlow)" class="blip-glow"/>
     <circle class="blip" cx="150" cy="265" r="5"/>
+    <circle cx="290" cy="250" r="10" fill="url(#blipGlow)" class="blip-glow"/>
     <circle class="blip" cx="290" cy="250" r="5"/>
   </svg>
 
-  <div class="wrap">
-    <h1>How far is <em>the cloud</em> from you?</h1>
+  <!-- Layer 4 — hero content (slowest parallax) -->
+  <div class="wrap hero-content" id="heroContent">
+    <h1 class="hero-headline">How far is <em>the cloud</em> from you?</h1>
     <p class="lede">
       Measure real round-trip latency from your browser to hundreds of cloud regions —
       no installs, no sign-ups. Pick your providers, press start, and watch the planet answer.
@@ -57,11 +92,12 @@
       <div class="hero-stat"><div class="num" id="statPings">0</div><div class="lbl">Pings sent</div></div>
     </div>
   </div>
+
 </section>
 
 <main class="wrap">
 
-  <section class="block" id="providersBlock">
+  <section class="block reveal-3d" id="providersBlock">
     <div class="block-head">
       <h2>Choose providers</h2>
       <div class="mini-actions">
@@ -72,7 +108,7 @@
     <div class="providers" id="providerGrid"></div>
   </section>
 
-  <section class="block">
+  <section class="block reveal-3d">
     <div class="controls">
       <button class="btn-run" id="runBtn">▶ &nbsp;Start test</button>
       <div class="run-status">
@@ -119,7 +155,7 @@
   </section>
 
   <!-- ======== AI Analysis section ======== -->
-  <section class="block">
+  <section class="block reveal-3d">
     <div class="block-head">
       <h2>AI Analysis</h2>
       <span class="hint">Ask Claude about your results</span>

@@ -783,4 +783,165 @@ Give precise, actionable advice. Reference specific millisecond values from the 
 
   document.addEventListener("DOMContentLoaded", initAI);
 
+  /* ================================================================
+     CINEMATIC 3D ENGINE
+     UI/UX Pro Max Skill: Style #5 3D & Hyperrealism
+                          Style #43 Interactive Cursor Design
+                          Style #31 Parallax Storytelling
+     Skill §7: All animations respect prefers-reduced-motion,
+               are interruptible, and never block user input.
+     ================================================================ */
+
+  function initCinematic3D() {
+    // Skill §7: Always respect user motion preference
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    /* ── Smooth mouse tracking with lerp ── */
+    let targetMX = 0, targetMY = 0;
+    let currentMX = 0, currentMY = 0;
+
+    document.addEventListener("mousemove", e => {
+      targetMX = (e.clientX / window.innerWidth  - 0.5) * 2;
+      targetMY = (e.clientY / window.innerHeight - 0.5) * 2;
+    });
+
+    // Zero out on mouse leave (prevents stuck tilt when cursor leaves window)
+    document.addEventListener("mouseleave", () => { targetMX = 0; targetMY = 0; });
+
+    /* ── Hero parallax targets ── */
+    const heroContent = document.getElementById("heroContent");
+    const heroRadar   = document.getElementById("heroRadar");
+    const heroOrbs    = document.querySelector(".hero-orbs");
+    const heroFloats  = document.querySelector(".hero-floats");
+
+    /* ── RAF loop: lerp + apply transforms ── */
+    function rafLoop() {
+      const ease = 0.055;
+      currentMX += (targetMX - currentMX) * ease;
+      currentMY += (targetMY - currentMY) * ease;
+
+      // Hero text — slowest (depth 1)
+      if (heroContent) {
+        heroContent.style.transform =
+          `translate3d(${currentMX * -9}px, ${currentMY * -6}px, 0)`;
+      }
+
+      // Radar — medium depth + 3D tilt (depth 3)
+      if (heroRadar) {
+        heroRadar.style.transform =
+          `translateY(-50%) translate3d(${currentMX * 26}px, ${currentMY * 16}px, 0)` +
+          ` perspective(900px) rotateX(${currentMY * -5}deg) rotateY(${currentMX * 6}deg)`;
+      }
+
+      // Orbs — barely move (depth 0.5)
+      if (heroOrbs) {
+        heroOrbs.style.transform =
+          `translate3d(${currentMX * -5}px, ${currentMY * -3.5}px, 0)`;
+      }
+
+      // Float chips container — fast (depth 2.5)
+      if (heroFloats) {
+        heroFloats.style.transform =
+          `translate3d(${currentMX * 20}px, ${currentMY * 13}px, 0)`;
+      }
+
+      requestAnimationFrame(rafLoop);
+    }
+    rafLoop();
+
+    /* ── 3D card tilt (holographic) ── */
+    function attachCardTilt(card) {
+      card.addEventListener("mouseenter", () => {
+        // Remove transform from transition so mouse follows instantly
+        card.style.transition = "box-shadow 0.3s ease, border-color 0.2s ease";
+      });
+
+      card.addEventListener("mousemove", e => {
+        const rect = card.getBoundingClientRect();
+        const cx = ((e.clientX - rect.left) / rect.width) * 100;
+        const cy = ((e.clientY - rect.top)  / rect.height) * 100;
+        // Normalised -0.5 … +0.5
+        const rx = (e.clientY - rect.top  - rect.height / 2) / rect.height;
+        const ry = (e.clientX - rect.left - rect.width  / 2) / rect.width;
+
+        // Perspective tilt + Z lift + slight scale
+        card.style.transform =
+          `perspective(700px) rotateX(${-rx * 13}deg) rotateY(${ry * 15}deg) translateZ(14px) scale(1.025)`;
+
+        // Holographic sheen follows cursor
+        card.style.setProperty("--cx", cx + "%");
+        card.style.setProperty("--cy", cy + "%");
+
+        // Dynamic shadow shifts with tilt direction (simulates light source)
+        const sx = ry * -14;
+        const sy = rx * 10;
+        card.style.boxShadow =
+          `${sx}px ${sy}px 28px rgba(31,30,29,0.14), 0 18px 50px rgba(31,30,29,0.1)`;
+      });
+
+      card.addEventListener("mouseleave", () => {
+        // Spring back — add transition back for smooth return
+        card.style.transition =
+          "transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s ease, border-color 0.2s ease";
+        card.style.transform = "";
+        card.style.boxShadow = "";
+        card.style.removeProperty("--cx");
+        card.style.removeProperty("--cy");
+      });
+    }
+
+    // Apply tilt to all current provider cards
+    document.querySelectorAll(".provider-card").forEach(attachCardTilt);
+
+    // Also apply after selAll/selNone re-render (MutationObserver)
+    const providerGrid = document.getElementById("providerGrid");
+    if (providerGrid) {
+      new MutationObserver(() => {
+        providerGrid.querySelectorAll(".provider-card").forEach(card => {
+          if (!card.dataset.tiltInit) {
+            card.dataset.tiltInit = "1";
+            attachCardTilt(card);
+          }
+        });
+      }).observe(providerGrid, { childList: true });
+    }
+
+    // Apply tilt to podium cards when they appear
+    const podiumEl = document.getElementById("podium");
+    if (podiumEl) {
+      new MutationObserver(() => {
+        podiumEl.querySelectorAll(".podium-card").forEach(card => {
+          if (!card.dataset.tiltInit) {
+            card.dataset.tiltInit = "1";
+            attachCardTilt(card);
+          }
+        });
+      }).observe(podiumEl, { childList: true, subtree: true });
+    }
+  }
+
+  /* ── Scroll-driven 3D reveals ── */
+  function initScrollReveal() {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      // Show all immediately without animation
+      document.querySelectorAll(".reveal-3d").forEach(el => el.classList.add("in-view"));
+      return;
+    }
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("in-view");
+          obs.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.07, rootMargin: "0px 0px -40px 0px" });
+
+    document.querySelectorAll(".reveal-3d").forEach(el => obs.observe(el));
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    initScrollReveal();
+    initCinematic3D();
+  });
+
 })();
