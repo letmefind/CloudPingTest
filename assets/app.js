@@ -739,15 +739,16 @@
     }
 
     const q = question.toLowerCase();
-    const sorted  = [...allRows].sort((a, b) => a.stats.median - b.stats.median);
+    const sorted   = [...allRows].sort((a, b) => a.stats.median - b.stats.median);
     const byJitter = [...allRows].sort((a, b) => a.stats.jitter - b.stats.jitter);
 
     /* ── Intent detection ── */
     const wantsJitter   = /jitter|stable|reliab|consist|fluctuat/.test(q);
-    const wantsProvider = /provider|cloud(?! region)|aws|azure|gcp|which cloud/.test(q);
-    const wantsMyLoc    = /my loc|for me|nearest|closest|where i am/.test(q);
-    const geoFilter     = q.match(/\b(europe|asia|middle east|me\b|us(?:a)?\b|america|africa|australia|oceania)\b/i)?.[1];
-    const wantsTop3     = /top 3|compare/.test(q);
+    const wantsProvider = /\bprovider\b|which cloud|best cloud|aws\b|azure\b|gcp\b/.test(q);
+    // Geo filter — explicit geographic names only (avoid matching pronoun "me")
+    const GEO_PATTERN = /\b(europe|european|asia|asian|middle east|south america|latin america|north america|united states|africa|australia|oceania)\b/i;
+    const geoFilter   = q.match(GEO_PATTERN)?.[1];
+    const wantsTop3   = /top 3|compare top|detail/.test(q);
 
     /* ── Header with location context ── */
     let md = "";
@@ -815,27 +816,45 @@
     /* ── Section: Geo-filtered results ── */
     if (geoFilter) {
       const geoMap = {
-        europe: "Europe", asia: "Asia Pacific",
-        "middle east": "Middle East", me: "Middle East",
-        us: "Americas", usa: "Americas", america: "Americas",
-        africa: "Africa", australia: "Oceania", oceania: "Oceania"
+        european: "Europe", europe: "Europe",
+        asian: "Asia Pacific", asia: "Asia Pacific",
+        "middle east": "Middle East",
+        "south america": "South America", "latin america": "South America",
+        "north america": "North America", "united states": "North America",
+        africa: "Africa", australia: "Oceania", oceania: "Oceania", americas: "Americas"
       };
       const targetRegion = geoMap[geoFilter.toLowerCase()] || geoFilter;
-      const filtered = sorted.filter(r => rowGeoRegion(r).toLowerCase().includes(targetRegion.toLowerCase()));
+      const filtered = sorted.filter(r => {
+        const zone = rowGeoRegion(r).toLowerCase();
+        return zone.includes(targetRegion.toLowerCase()) ||
+          targetRegion.toLowerCase().includes(zone.split(" ")[0]);
+      });
 
       if (!filtered.length) {
-        md += `No results found for **${targetRegion}** in your tested regions. Run the test with providers that cover this area.`;
+        md += `No **${targetRegion}** regions were measured in this test run.\n\n`;
+        md += `**Your fastest measured regions overall:**\n\n`;
+        sorted.slice(0, 5).forEach((r, i) => {
+          md += `${i + 1}. **${r.provider.name} ${r.region.text2}** \`${r.region.code}\` — `
+            + `**${Math.round(r.stats.median)}ms** · ${rowGeoRegion(r)}\n`;
+        });
+        md += `\nTo see ${targetRegion} results, select providers with coverage there and re-run the test.`;
       } else {
-        md += `## Best Regions for ${targetRegion}\n\n`;
-        filtered.slice(0, 5).forEach((r, i) => {
+        md += `## Best Regions in ${targetRegion}\n\n`;
+        filtered.slice(0, 6).forEach((r, i) => {
           md += `${i + 1}. **${r.provider.name} ${r.region.text2}** \`${r.region.code}\` — `
             + `**${Math.round(r.stats.median)}ms** (${latLabel(r.stats.median)}) · `
             + `Jitter ${Math.round(r.stats.jitter)}ms · Min ${Math.round(r.stats.min)}ms\n`;
         });
-        const best = filtered[0];
-        md += `\n**Best option:** ${best.provider.name} ${best.region.text2} at **${Math.round(best.stats.median)}ms** — ${latLabel(best.stats.median)} latency`;
-        if (best.stats.jitter < 10) md += `, very stable connection`;
+        const topGeo = filtered[0];
+        md += `\n**Best for ${targetRegion}:** ${topGeo.provider.name} ${topGeo.region.text2} at `
+          + `**${Math.round(topGeo.stats.median)}ms**`;
+        if (topGeo.stats.jitter < 10) md += ` — very stable (${Math.round(topGeo.stats.jitter)}ms jitter)`;
         md += `.`;
+
+        // Also show global best for context
+        if (sorted[0] !== topGeo) {
+          md += `\n\n**Global fastest** (from your connection): ${sorted[0].provider.name} ${sorted[0].region.text2} at ${Math.round(sorted[0].stats.median)}ms.`;
+        }
       }
       return aiRenderMarkdown(md);
     }
@@ -861,47 +880,51 @@
       return aiRenderMarkdown(md);
     }
 
-    /* ── Default: comprehensive overview ── */
-    const top5 = sorted.slice(0, 5);
-    const nearRegion = geo ? geo.geoRegion : null;
-    const nearRows   = nearRegion ? sorted.filter(r => rowGeoRegion(r) === nearRegion) : [];
+    /* ── Default / "best for my location" — always show global fastest ── */
+    // The measured latency IS the answer: fastest = best for this user's connection
+    const showCount = Math.min(allRows.length, 10);
+    const top       = sorted.slice(0, showCount);
+    const best      = sorted[0];
+    const mostStable = byJitter[0];
 
-    md += `## Top 5 Fastest Regions\n\n`;
-    top5.forEach((r, i) => {
+    md += `## Fastest Regions From Your Connection\n\n`;
+    top.forEach((r, i) => {
+      const geoZone = rowGeoRegion(r);
       md += `${i + 1}. **${r.provider.name} ${r.region.text2}** \`${r.region.code}\` — `
         + `**${Math.round(r.stats.median)}ms** (${latLabel(r.stats.median)}) · `
-        + `Jitter ${Math.round(r.stats.jitter)}ms · ${rowGeoRegion(r)}\n`;
+        + `Jitter ${Math.round(r.stats.jitter)}ms · ${geoZone}\n`;
     });
 
-    md += `\n## Best Cloud Provider Overall\n\n`;
-    md += `**${provRanked[0].name}** leads at avg **${Math.round(provRanked[0].avg)}ms** across ${provRanked[0].count} regions. `;
-    if (provRanked[1]) md += `${provRanked[1].name} is second at ${Math.round(provRanked[1].avg)}ms.`;
+    // Best provider summary
+    md += `\n## Best Cloud Provider\n\n`;
+    provRanked.slice(0, Math.min(provRanked.length, 5)).forEach((p, i) => {
+      md += `${i + 1}. **${p.name}** — avg **${Math.round(p.avg)}ms** · best ${Math.round(p.best)}ms · ${p.count} region(s)\n`;
+    });
 
-    if (nearRows.length > 0 && geo) {
-      md += `\n\n## Closest Regions to You (${geo.geoRegion})\n\n`;
-      nearRows.slice(0, 3).forEach((r, i) => {
-        md += `${i + 1}. **${r.provider.name} ${r.region.text2}** — ${Math.round(r.stats.median)}ms (${latLabel(r.stats.median)})\n`;
-      });
+    // Best overall recommendation
+    md += `\n## Recommendation\n\n`;
+    md += `**${best.provider.name} ${best.region.text2}** (`
+      + `\`${best.region.code}\`) is your fastest region at **${Math.round(best.stats.median)}ms**.`;
+
+    // Speed + stability combo
+    const goodStable = sorted.find(r => r.stats.jitter < 10 && r.stats.median < best.stats.median * 1.3);
+    if (goodStable && goodStable !== best) {
+      md += ` For the best balance of speed and stability, **${goodStable.provider.name} ${goodStable.region.text2}** `
+        + `(${Math.round(goodStable.stats.median)}ms, ${Math.round(goodStable.stats.jitter)}ms jitter) is an excellent choice.`;
     }
 
-    const mostStable = byJitter[0];
-    md += `\n## Most Stable Connection\n\n`;
-    md += `**${mostStable.provider.name} ${mostStable.region.text2}** has the lowest jitter at `
-      + `${Math.round(mostStable.stats.jitter)}ms — ${jitterLabel(mostStable.stats.jitter)}. `
-      + `Best for real-time applications (video calls, gaming, trading).`;
+    // Internet quality note
+    md += `\n\n**Your internet quality to the cloud:** `;
+    if (best.stats.median < 25)       md += `Excellent (sub-25ms) — you're physically close to cloud infrastructure.`;
+    else if (best.stats.median < 60)  md += `Very good (${Math.round(best.stats.median)}ms) — solid cloud connectivity.`;
+    else if (best.stats.median < 120) md += `Good (${Math.round(best.stats.median)}ms) — typical for most use cases.`;
+    else                              md += `${Math.round(best.stats.median)}ms to nearest region — consider providers with coverage closer to your location.`;
+    if (geo?.isp) md += ` Via **${geo.isp.replace(/^AS\d+\s+/, "").slice(0, 50)}**.`;
 
-    // Internet quality summary based on best result
-    const best = sorted[0];
-    md += `\n\n## Your Internet Quality to the Cloud\n\n`;
-    if (best.stats.median < 30) {
-      md += `Your fastest connection (**${Math.round(best.stats.median)}ms**) is excellent — you're well-connected to regional cloud infrastructure.`;
-    } else if (best.stats.median < 80) {
-      md += `Your fastest connection (**${Math.round(best.stats.median)}ms**) is very good for real-world use.`;
-    } else {
-      md += `Your fastest measured connection is **${Math.round(best.stats.median)}ms**. This may reflect geographic distance to tested regions — providers in your area may perform better.`;
-    }
-    if (geo?.isp) {
-      md += ` Connection is via **${geo.isp.replace(/^AS\d+\s+/, "").slice(0, 60)}**.`;
+    // Slow-end summary
+    const worst = sorted[sorted.length - 1];
+    if (worst.stats.median > best.stats.median * 4 && sorted.length > 3) {
+      md += `\n\n**Slowest region:** ${worst.provider.name} ${worst.region.text2} at ${Math.round(worst.stats.median)}ms — avoid for latency-sensitive workloads.`;
     }
 
     return aiRenderMarkdown(md);
