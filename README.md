@@ -57,9 +57,21 @@ CloudPing sends image-beacon pings from your browser to public endpoints of ever
 
 ## Screenshots
 
-| Light mode | Dark mode |
-|---|---|
-| *(add screenshot here)* | *(add screenshot here)* |
+**Light mode — home**
+
+![CloudPing light mode](images/screenshot-light.png)
+
+**Dark mode — live results with podium**
+
+![CloudPing dark mode with results](images/screenshot-dark-results.png)
+
+**Light mode — test running**
+
+![CloudPing light mode with results](images/screenshot-light-results.png)
+
+**فارسی (Persian RTL)**
+
+![CloudPing Persian RTL](images/screenshot-persian.png)
 
 ---
 
