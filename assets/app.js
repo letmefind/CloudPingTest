@@ -498,4 +498,261 @@
   }
 
   document.addEventListener("DOMContentLoaded", init);
+
+  /* ==============================================================
+     Claude 3.5 Sonnet — AI analysis integration
+     Direct browser→Anthropic API call. Key stored in localStorage.
+     ============================================================== */
+
+  const CLAUDE_MODEL  = "claude-3-5-sonnet-20241022";
+  const CLAUDE_API    = "https://api.anthropic.com/v1/messages";
+  const AI_LS_KEY     = "cloudping.ai.key.v1";
+
+  let _aiKey = "";
+
+  function aiGetKey() {
+    if (!_aiKey) _aiKey = localStorage.getItem(AI_LS_KEY) || "";
+    return _aiKey;
+  }
+
+  function aiSetKey(raw) {
+    _aiKey = raw.trim();
+    if (_aiKey) localStorage.setItem(AI_LS_KEY, _aiKey);
+    else localStorage.removeItem(AI_LS_KEY);
+    aiUpdateKeyUI();
+  }
+
+  function aiUpdateKeyUI() {
+    const k = aiGetKey();
+    const disp = $("#aiKeyDisplay");
+    if (disp) {
+      disp.textContent = k ? `sk-ant-…${k.slice(-4)}` : "No key set";
+      disp.dataset.set = k ? "1" : "";
+    }
+    // enable/disable send button based on key presence
+    const btn = $("#aiSubmitBtn");
+    if (btn) btn.disabled = !k;
+  }
+
+  /* Build a compact text summary of current results for the system prompt */
+  function aiBuildContext() {
+    const rows = state.rows.filter(r => r.stats);
+    if (!rows.length) return null;
+
+    const sorted = [...rows].sort((a, b) => a.stats.median - b.stats.median);
+    const top = sorted.slice(0, 20);
+    const providers = [...state.selected]
+      .map(id => PROVIDERS.find(p => p.id === id)?.name)
+      .filter(Boolean)
+      .join(", ");
+
+    const lines = top.map((r, i) =>
+      `${i + 1}. ${r.provider.name} · ${r.region.text2} (${r.region.text1}) [${r.region.code}]` +
+      ` — median ${Math.round(r.stats.median)}ms, min ${Math.round(r.stats.min)}ms,` +
+      ` max ${Math.round(r.stats.max)}ms, jitter ${Math.round(r.stats.jitter)}ms`
+    );
+
+    const last = sorted[sorted.length - 1];
+    return (
+      `CloudPing test — ${state.round} round(s) completed\n` +
+      `Providers tested: ${providers}\n` +
+      `Total regions measured: ${rows.length}\n\n` +
+      `Top 20 fastest regions (by median):\n${lines.join("\n")}\n\n` +
+      `Slowest region: ${last.provider.name} · ${last.region.text2} — ${Math.round(last.stats.median)}ms`
+    );
+  }
+
+  /* Minimal markdown → HTML (safe: entities escaped first) */
+  function aiRenderMarkdown(text) {
+    const esc = text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+    return esc
+      .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/`([^`\n]+)`/g, "<code>$1</code>")
+      .replace(/^### (.+)$/gm, "<h4>$1</h4>")
+      .replace(/^## (.+)$/gm, "<h3>$1</h3>")
+      .split(/\n\n+/)
+      .map(block => {
+        if (/^<h[234]/.test(block.trim())) return block;
+        return `<p>${block.replace(/\n/g, "<br>")}</p>`;
+      })
+      .join("\n");
+  }
+
+  async function aiCallClaude(question) {
+    const key = aiGetKey();
+    const box = $("#aiResponse");
+
+    if (!key) {
+      box.innerHTML = `<span class="ai-error">Enter your Anthropic API key below to enable AI analysis.</span>`;
+      box.classList.add("has-content");
+      box.classList.remove("streaming");
+      // reveal key row
+      const row = $("#aiKeyRow");
+      if (row) { row.hidden = false; $("#aiKeyInput")?.focus(); }
+      return;
+    }
+
+    const context = aiBuildContext();
+    if (!context) {
+      box.innerHTML = `<span class="ai-error">Run a latency test first — Claude needs data to analyze.</span>`;
+      box.classList.add("has-content");
+      return;
+    }
+
+    const system = `You are a network infrastructure expert interpreting real latency measurements from CloudPing, a browser-based tool that pings cloud endpoints using the image-beacon technique. Results reflect the user's actual network path and conditions.
+
+Give precise, actionable advice. Reference specific millisecond values from the data. Use markdown (bold, headers, bullet points) for clarity when the answer has multiple parts. Be concise — 150–300 words unless a detailed comparison is needed.`;
+
+    const userMsg = `My latency test results:\n\n${context}\n\n---\n\n${question}`;
+
+    // setup streaming UI
+    box.innerHTML = "";
+    box.classList.add("streaming");
+    box.classList.remove("has-content");
+    const cursor = document.createElement("span");
+    cursor.className = "ai-cursor";
+    box.appendChild(cursor);
+
+    const btn = $("#aiSubmitBtn");
+    if (btn) btn.disabled = true;
+
+    let fullText = "";
+
+    try {
+      const res = await fetch(CLAUDE_API, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": key,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true"
+        },
+        body: JSON.stringify({
+          model: CLAUDE_MODEL,
+          max_tokens: 1024,
+          stream: true,
+          system,
+          messages: [{ role: "user", content: userMsg }]
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const msg = err.error?.message || `HTTP ${res.status}`;
+        throw new Error(
+          res.status === 401 ? "Invalid API key — check your Anthropic key." : msg
+        );
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+
+        const parts = buf.split("\n");
+        buf = parts.pop() || "";
+
+        for (const line of parts) {
+          if (!line.startsWith("data: ")) continue;
+          const raw = line.slice(6).trim();
+          if (raw === "[DONE]") continue;
+          try {
+            const evt = JSON.parse(raw);
+            if (
+              evt.type === "content_block_delta" &&
+              evt.delta?.type === "text_delta" &&
+              evt.delta.text
+            ) {
+              fullText += evt.delta.text;
+              // re-render with cursor
+              box.innerHTML = aiRenderMarkdown(fullText);
+              box.appendChild(cursor);
+            }
+          } catch (_) { /* malformed SSE chunk — skip */ }
+        }
+      }
+
+      // finalise
+      box.innerHTML = aiRenderMarkdown(fullText);
+      box.classList.remove("streaming");
+      box.classList.add("has-content");
+
+    } catch (err) {
+      box.innerHTML = `<span class="ai-error">⚠ ${err.message}</span>`;
+      box.classList.remove("streaming");
+      box.classList.add("has-content");
+    } finally {
+      if (btn) btn.disabled = !aiGetKey();
+    }
+  }
+
+  function initAI() {
+    aiUpdateKeyUI();
+
+    const promptEl   = $("#aiPromptInput");
+    const submitBtn  = $("#aiSubmitBtn");
+    const keyInput   = $("#aiKeyInput");
+    const keySave    = $("#aiKeySave");
+    const keyToggle  = $("#aiKeyToggle");
+    const keyRow     = $("#aiKeyRow");
+
+    if (!promptEl) return;
+
+    /* quick chips → fill textarea */
+    document.querySelectorAll(".ai-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        promptEl.value = chip.dataset.q;
+        promptEl.focus();
+      });
+    });
+
+    /* submit: click or Ctrl/Cmd+Enter */
+    const doSend = () => {
+      const q = promptEl.value.trim();
+      if (!q) return;
+      aiCallClaude(q);
+    };
+
+    submitBtn?.addEventListener("click", doSend);
+    promptEl.addEventListener("keydown", e => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doSend(); }
+    });
+
+    /* key management */
+    keyToggle?.addEventListener("click", () => {
+      if (keyRow) {
+        keyRow.hidden = !keyRow.hidden;
+        if (!keyRow.hidden) keyInput?.focus();
+      }
+    });
+
+    const saveKey = () => {
+      const v = keyInput?.value || "";
+      if (v.trim()) {
+        aiSetKey(v);
+        if (keyRow) keyRow.hidden = true;
+        toast("API key saved");
+      }
+    };
+
+    keySave?.addEventListener("click", saveKey);
+    keyInput?.addEventListener("keydown", e => {
+      if (e.key === "Enter") saveKey();
+      if (e.key === "Escape" && keyRow) keyRow.hidden = true;
+    });
+
+    // If a key is already stored, reveal the send button immediately
+    aiUpdateKeyUI();
+  }
+
+  document.addEventListener("DOMContentLoaded", initAI);
+
 })();

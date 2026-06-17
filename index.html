@@ -118,6 +118,69 @@
     </div>
   </section>
 
+  <!-- ======== AI Analysis section ======== -->
+  <section class="block">
+    <div class="block-head">
+      <h2>AI Analysis</h2>
+      <span class="hint">Ask Claude about your results</span>
+    </div>
+
+    <div class="ai-panel">
+      <div class="ai-panel-head">
+        <div class="ai-title">
+          <!-- Claude mark: simple concentric paths evoking a signal/antenna -->
+          <div class="ai-logo" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 3C7.03 3 3 7.03 3 12s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9zm0 4a5 5 0 1 1 0 10A5 5 0 0 1 12 7zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>
+            </svg>
+          </div>
+          Ask Claude about your results
+        </div>
+        <span class="ai-badge">claude-3-5-sonnet</span>
+      </div>
+
+      <div class="ai-body">
+        <!-- quick-question chips -->
+        <div class="ai-chips" role="group" aria-label="Quick questions">
+          <button class="ai-chip" data-q="Which region gives the lowest latency for users in Europe?">Best for Europe?</button>
+          <button class="ai-chip" data-q="Which region is best for users in Asia or the Middle East?">Best for Asia/ME?</button>
+          <button class="ai-chip" data-q="Compare the top 3 fastest regions and explain why one might be better than another.">Compare top 3</button>
+          <button class="ai-chip" data-q="Which cloud provider gives the best overall latency across all their tested regions?">Best provider?</button>
+          <button class="ai-chip" data-q="What do the jitter values tell me? Which regions have the most stable connection?">Explain jitter</button>
+        </div>
+
+        <!-- prompt input — monospace/terminal style -->
+        <div class="ai-input-row">
+          <textarea id="aiPromptInput" rows="2"
+            placeholder="Ask anything about your latency results… (Ctrl+Enter to send)"></textarea>
+          <button class="ai-send-btn" id="aiSubmitBtn" title="Send (Ctrl+Enter)" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- streaming response — annotation/margin-note aesthetic -->
+        <div class="ai-response" id="aiResponse" aria-live="polite" aria-label="Claude response"></div>
+
+        <!-- key management footer -->
+        <div class="ai-key-bar">
+          <span class="lbl">API key:</span>
+          <span class="ai-key-display" id="aiKeyDisplay">No key set</span>
+          <button class="ai-key-toggle" id="aiKeyToggle">change</button>
+        </div>
+        <div class="ai-key-row" id="aiKeyRow" hidden>
+          <input type="password" id="aiKeyInput"
+            placeholder="sk-ant-api03-…" autocomplete="off" spellcheck="false">
+          <button class="ai-key-save" id="aiKeySave">Save</button>
+        </div>
+        <p class="ai-key-note">
+          Stored only in your browser's localStorage · sent directly to Anthropic · never shared.
+        </p>
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <div class="toast" id="toast"></div>
